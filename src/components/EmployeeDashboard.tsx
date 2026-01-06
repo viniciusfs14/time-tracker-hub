@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Clock, Calendar, Target } from 'lucide-react';
+import { Clock, Calendar, Target, StickyNote } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Timer } from '@/components/Timer';
 import { ManualEntry } from '@/components/ManualEntry';
@@ -7,6 +7,7 @@ import { RitmManager } from '@/components/RitmManager';
 import { ActivityChart } from '@/components/ActivityChart';
 import { RecentEntries } from '@/components/RecentEntries';
 import { StatsCard } from '@/components/StatsCard';
+import { NotesPanel } from '@/components/NotesPanel';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { formatTime, formatTimeShort } from '@/utils/time';
 
@@ -68,7 +69,7 @@ export function EmployeeDashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="timer" className="space-y-6">
-        <TabsList className="bg-muted/50">
+        <TabsList className="bg-muted/50 flex-wrap h-auto">
           <TabsTrigger value="timer" className="gap-2">
             <Clock className="w-4 h-4" />
             Cronômetro
@@ -79,7 +80,15 @@ export function EmployeeDashboard() {
           <TabsTrigger value="ritm" className="gap-2">
             💼 Chamados
           </TabsTrigger>
+          <TabsTrigger value="notes" className="gap-2">
+            <StickyNote className="w-4 h-4" />
+            Notas
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="notes" className="mt-0">
+          <NotesPanel />
+        </TabsContent>
 
         <div className="grid lg:grid-cols-2 gap-6">
           <TabsContent value="timer" className="mt-0">
