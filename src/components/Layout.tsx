@@ -1,9 +1,10 @@
 import { ReactNode } from 'react';
-import { LogOut, User, Clock } from 'lucide-react';
+import { LogOut, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGreeting, formatDate } from '@/utils/time';
+import { ThemeToggle } from './ThemeToggle';
 
 interface LayoutProps {
   children: ReactNode;
@@ -44,6 +45,7 @@ export function Layout({ children }: LayoutProps) {
                   </p>
                 </div>
               </div>
+              <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
