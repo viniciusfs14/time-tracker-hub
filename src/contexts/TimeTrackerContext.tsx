@@ -1,35 +1,49 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { TimeEntry, TimerState, RitmStatus } from '@/types';
+import { TimeEntry, TimerState, RitmStatus, Profile } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
 interface TimeTrackerContextType {
   timer: TimerState;
   entries: TimeEntry[];
   ritmStatuses: RitmStatus[];
+  profiles: Profile[];
+  loading: boolean;
   startTimer: (activity: string, ritmCode?: string) => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
-  stopTimer: () => void;
-  addManualEntry: (activity: string, startTime: string, endTime: string, ritmCode?: string) => void;
-  updateRitmStatus: (code: string, status: 'open' | 'closed') => void;
+  stopTimer: () => Promise<void>;
+  addManualEntry: (activity: string, startTime: string, endTime: string, ritmCode?: string) => Promise<void>;
+  updateRitmStatus: (code: string, status: 'open' | 'closed') => Promise<void>;
   getTodayTotal: () => number;
   getEntriesByPeriod: (days: number) => TimeEntry[];
   getUserEntries: (userId?: string) => TimeEntry[];
+  getProfileName: (userId: string) => string;
 }
 
 const TimeTrackerContext = createContext<TimeTrackerContextType | undefined>(undefined);
 
-const STORAGE_KEY_ENTRIES = 'timetracker_entries';
 const STORAGE_KEY_TIMER = 'timetracker_timer';
-const STORAGE_KEY_RITM = 'timetracker_ritm';
+
+const mapEntry = (r: any): TimeEntry => ({
+  id: r.id,
+  userId: r.user_id,
+  activity: r.activity,
+  ritmCode: r.ritm_code ?? undefined,
+  startTime: r.start_time,
+  endTime: r.end_time ?? undefined,
+  duration: r.duration,
+  date: r.date,
+  type: r.type === 'manual' ? 'manual' : 'timer',
+});
 
 export function TimeTrackerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  
-  const [entries, setEntries] = useState<TimeEntry[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_ENTRIES);
-    return saved ? JSON.parse(saved) : [];
-  });
+
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [ritmStatuses, setRitmStatuses] = useState<RitmStatus[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [timer, setTimer] = useState<TimerState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY_TIMER);
@@ -42,23 +56,41 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     };
   });
 
-  const [ritmStatuses, setRitmStatuses] = useState<RitmStatus[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY_RITM);
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Persist to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_ENTRIES, JSON.stringify(entries));
-  }, [entries]);
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_TIMER, JSON.stringify(timer));
   }, [timer]);
 
+  const refresh = useCallback(async () => {
+    if (!user) {
+      setEntries([]);
+      setRitmStatuses([]);
+      setProfiles([]);
+      return;
+    }
+    setLoading(true);
+    const [entriesRes, ritmRes, profilesRes] = await Promise.all([
+      supabase.from('time_entries').select('*').order('start_time', { ascending: false }),
+      supabase.from('ritm_statuses').select('*'),
+      supabase.from('profiles').select('id, name'),
+    ]);
+
+    if (entriesRes.data) setEntries(entriesRes.data.map(mapEntry));
+    if (ritmRes.data) {
+      setRitmStatuses(
+        ritmRes.data.map((r) => ({
+          code: r.code,
+          status: r.status === 'closed' ? 'closed' : 'open',
+          totalTime: r.total_time,
+        }))
+      );
+    }
+    if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
+    setLoading(false);
+  }, [user]);
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY_RITM, JSON.stringify(ritmStatuses));
-  }, [ritmStatuses]);
+    refresh();
+  }, [refresh]);
 
   const startTimer = useCallback((activity: string, ritmCode?: string) => {
     setTimer({
@@ -87,26 +119,15 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const stopTimer = useCallback(() => {
+  const stopTimer = useCallback(async () => {
     if (!user) return;
 
     const totalTime = timer.status === 'running'
       ? timer.accumulatedTime + (Date.now() - (timer.startTime || Date.now()))
       : timer.accumulatedTime;
 
-    const entry: TimeEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      userId: user.id,
-      activity: timer.currentActivity,
-      ritmCode: timer.ritmCode || undefined,
-      startTime: new Date(),
-      endTime: new Date(),
-      duration: Math.floor(totalTime / 1000),
-      date: new Date().toISOString().split('T')[0],
-      type: 'timer',
-    };
+    const now = new Date();
 
-    setEntries(prev => [...prev, entry]);
     setTimer({
       status: 'stopped',
       startTime: null,
@@ -114,48 +135,57 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
       currentActivity: '',
       ritmCode: '',
     });
-  }, [timer, user]);
 
-  const addManualEntry = useCallback((activity: string, startTime: string, endTime: string, ritmCode?: string) => {
+    await supabase.from('time_entries').insert({
+      user_id: user.id,
+      activity: timer.currentActivity,
+      ritm_code: timer.ritmCode || null,
+      start_time: new Date(now.getTime() - totalTime).toISOString(),
+      end_time: now.toISOString(),
+      duration: Math.floor(totalTime / 1000),
+      date: now.toISOString().split('T')[0],
+      type: 'timer',
+    });
+
+    await refresh();
+  }, [timer, user, refresh]);
+
+  const addManualEntry = useCallback(async (activity: string, startTime: string, endTime: string, ritmCode?: string) => {
     if (!user) return;
 
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
-    
+
     const startDate = new Date();
-    startDate.setHours(startHour, startMin, 0);
-    
+    startDate.setHours(startHour, startMin, 0, 0);
+
     const endDate = new Date();
-    endDate.setHours(endHour, endMin, 0);
-    
+    endDate.setHours(endHour, endMin, 0, 0);
+
     const duration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
-    
     if (duration <= 0) return;
 
-    const entry: TimeEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      userId: user.id,
+    await supabase.from('time_entries').insert({
+      user_id: user.id,
       activity,
-      ritmCode,
-      startTime: startDate,
-      endTime: endDate,
+      ritm_code: ritmCode || null,
+      start_time: startDate.toISOString(),
+      end_time: endDate.toISOString(),
       duration,
       date: new Date().toISOString().split('T')[0],
       type: 'manual',
-    };
-
-    setEntries(prev => [...prev, entry]);
-  }, [user]);
-
-  const updateRitmStatus = useCallback((code: string, status: 'open' | 'closed') => {
-    setRitmStatuses(prev => {
-      const existing = prev.find(r => r.code === code);
-      if (existing) {
-        return prev.map(r => r.code === code ? { ...r, status } : r);
-      }
-      return [...prev, { code, status, totalTime: 0 }];
     });
-  }, []);
+
+    await refresh();
+  }, [user, refresh]);
+
+  const updateRitmStatus = useCallback(async (code: string, status: 'open' | 'closed') => {
+    if (!user) return;
+    await supabase
+      .from('ritm_statuses')
+      .upsert({ user_id: user.id, code, status }, { onConflict: 'user_id,code' });
+    await refresh();
+  }, [user, refresh]);
 
   const getTodayTotal = useCallback(() => {
     if (!user) return 0;
@@ -169,7 +199,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     if (!user) return [];
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    return entries.filter(e => 
+    return entries.filter(e =>
       e.userId === user.id && new Date(e.date) >= cutoff
     );
   }, [entries, user]);
@@ -181,11 +211,17 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     return entries;
   }, [entries]);
 
+  const getProfileName = useCallback((userId: string) => {
+    return profiles.find(p => p.id === userId)?.name || userId.slice(0, 8);
+  }, [profiles]);
+
   return (
     <TimeTrackerContext.Provider value={{
       timer,
       entries,
       ritmStatuses,
+      profiles,
+      loading,
       startTimer,
       pauseTimer,
       resumeTimer,
@@ -195,6 +231,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
       getTodayTotal,
       getEntriesByPeriod,
       getUserEntries,
+      getProfileName,
     }}>
       {children}
     </TimeTrackerContext.Provider>
