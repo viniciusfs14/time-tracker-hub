@@ -10,11 +10,16 @@ export interface TimeEntry {
   userId: string;
   activity: string;
   ritmCode?: string;
-  startTime: Date;
-  endTime?: Date;
+  startTime: string;
+  endTime?: string;
   duration: number; // in seconds
   date: string;
   type: 'timer' | 'manual';
+}
+
+export interface Profile {
+  id: string;
+  name: string;
 }
 
 export interface RitmStatus {
