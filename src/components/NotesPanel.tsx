@@ -1,84 +1,94 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StickyNote, Save, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Note {
   id: string;
   title: string;
   content: string;
-  createdAt: string;
-  updatedAt: string;
 }
-
-const STORAGE_KEY = 'timetracker_notes';
 
 export function NotesPanel() {
   const { user } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const loadNotes = useCallback(async () => {
     if (!user) return;
-    const saved = localStorage.getItem(`${STORAGE_KEY}_${user.id}`);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setNotes(parsed);
-      if (parsed.length > 0 && !selectedNote) {
-        setSelectedNote(parsed[0]);
-        setTitle(parsed[0].title);
-        setContent(parsed[0].content);
+    const { data } = await supabase
+      .from('notes')
+      .select('id, title, content')
+      .order('updated_at', { ascending: false });
+    if (data) {
+      setNotes(data);
+      if (data.length > 0) {
+        setSelectedId((prev) => prev ?? data[0].id);
+        if (!selectedId) {
+          setTitle(data[0].title);
+          setContent(data[0].content);
+        }
       }
     }
-  }, [user]);
+  }, [user, selectedId]);
 
   useEffect(() => {
-    if (!user) return;
-    localStorage.setItem(`${STORAGE_KEY}_${user.id}`, JSON.stringify(notes));
-  }, [notes, user]);
+    loadNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
-  const createNewNote = () => {
-    const newNote: Note = {
-      id: `note-${Date.now()}`,
-      title: 'Nova anotação',
-      content: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    setNotes(prev => [newNote, ...prev]);
-    setSelectedNote(newNote);
-    setTitle(newNote.title);
-    setContent(newNote.content);
+  const createNewNote = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({ user_id: user.id, title: 'Nova anotação', content: '' })
+      .select('id, title, content')
+      .single();
+    if (error || !data) {
+      toast.error('Erro ao criar anotação');
+      return;
+    }
+    setNotes((prev) => [data, ...prev]);
+    selectNote(data);
   };
 
-  const saveNote = () => {
-    if (!selectedNote) return;
-    
-    setNotes(prev => prev.map(n => 
-      n.id === selectedNote.id 
-        ? { ...n, title, content, updatedAt: new Date().toISOString() }
-        : n
-    ));
-    setSelectedNote(prev => prev ? { ...prev, title, content } : null);
+  const saveNote = async () => {
+    if (!selectedId) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from('notes')
+      .update({ title, content })
+      .eq('id', selectedId);
+    setSaving(false);
+    if (error) {
+      toast.error('Erro ao salvar');
+      return;
+    }
+    setNotes((prev) => prev.map((n) => (n.id === selectedId ? { ...n, title, content } : n)));
     toast.success('Anotação salva!');
   };
 
-  const deleteNote = (noteId: string) => {
-    setNotes(prev => prev.filter(n => n.id !== noteId));
-    if (selectedNote?.id === noteId) {
-      const remaining = notes.filter(n => n.id !== noteId);
+  const deleteNote = async (noteId: string) => {
+    const { error } = await supabase.from('notes').delete().eq('id', noteId);
+    if (error) {
+      toast.error('Erro ao excluir');
+      return;
+    }
+    const remaining = notes.filter((n) => n.id !== noteId);
+    setNotes(remaining);
+    if (selectedId === noteId) {
       if (remaining.length > 0) {
-        setSelectedNote(remaining[0]);
-        setTitle(remaining[0].title);
-        setContent(remaining[0].content);
+        selectNote(remaining[0]);
       } else {
-        setSelectedNote(null);
+        setSelectedId(null);
         setTitle('');
         setContent('');
       }
@@ -87,7 +97,7 @@ export function NotesPanel() {
   };
 
   const selectNote = (note: Note) => {
-    setSelectedNote(note);
+    setSelectedId(note.id);
     setTitle(note.title);
     setContent(note.content);
   };
@@ -118,12 +128,12 @@ export function NotesPanel() {
           <div className="grid gap-4 lg:grid-cols-3">
             {/* Notes list */}
             <div className="space-y-2 lg:col-span-1 max-h-[300px] overflow-y-auto pr-2">
-              {notes.map(note => (
+              {notes.map((note) => (
                 <div
                   key={note.id}
                   onClick={() => selectNote(note)}
                   className={`p-3 rounded-lg cursor-pointer transition-all border ${
-                    selectedNote?.id === note.id
+                    selectedId === note.id
                       ? 'bg-primary/10 border-primary/30'
                       : 'bg-muted/30 border-border/50 hover:bg-muted/50'
                   }`}
@@ -152,7 +162,7 @@ export function NotesPanel() {
             </div>
 
             {/* Editor */}
-            {selectedNote && (
+            {selectedId && (
               <div className="lg:col-span-2 space-y-3">
                 <Input
                   value={title}
@@ -167,9 +177,9 @@ export function NotesPanel() {
                   className="min-h-[200px] resize-none"
                 />
                 <div className="flex justify-end">
-                  <Button onClick={saveNote} className="gap-2">
+                  <Button onClick={saveNote} disabled={saving} className="gap-2">
                     <Save className="w-4 h-4" />
-                    Salvar
+                    {saving ? 'Salvando...' : 'Salvar'}
                   </Button>
                 </div>
               </div>
