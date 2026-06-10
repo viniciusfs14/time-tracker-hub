@@ -8,7 +8,7 @@ import { formatTime, formatDate, extractRitmCode } from '@/utils/time';
 import { cn } from '@/lib/utils';
 
 export function AdminDashboard() {
-  const { entries, ritmStatuses } = useTimeTracker();
+  const { entries, ritmStatuses, getProfileName } = useTimeTracker();
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<string>('all');
 
@@ -115,7 +115,7 @@ export function AdminDashboard() {
                 <SelectItem value="all">Todos</SelectItem>
                 {users.map(user => (
                   <SelectItem key={user} value={user}>
-                    {user}
+                    {getProfileName(user)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -170,7 +170,7 @@ export function AdminDashboard() {
                   ) : (
                     filteredEntries.map(entry => (
                       <tr key={entry.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium">{entry.userId}</td>
+                        <td className="px-4 py-3 text-sm font-medium">{getProfileName(entry.userId)}</td>
                         <td className="px-4 py-3 text-sm">{entry.activity}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(entry.date)}</td>
                         <td className="px-4 py-3 text-sm font-mono font-medium text-primary">{formatTime(entry.duration)}</td>
