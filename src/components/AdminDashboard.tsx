@@ -17,7 +17,7 @@ const STATUS_META: Record<RitmStatusValue, { label: string; icon: typeof CircleD
 
 
 export function AdminDashboard() {
-  const { entries, ritmStatuses, getProfileName } = useTimeTracker();
+  const { entries, ritms, getProfileName } = useTimeTracker();
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<string>('all');
 
