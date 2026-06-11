@@ -94,8 +94,9 @@ export function EmployeeDashboard() {
 
         <div className="grid lg:grid-cols-2 gap-6">
           <TabsContent value="timer" className="mt-0">
-            <Timer />
+            <TimersPanel />
           </TabsContent>
+
 
           <TabsContent value="manual" className="mt-0">
             <ManualEntry />
