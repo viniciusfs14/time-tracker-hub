@@ -22,18 +22,52 @@ export interface Profile {
   name: string;
 }
 
-export interface RitmStatus {
+export type RitmStatusValue = 'open' | 'pending' | 'closed';
+
+export interface Ritm {
+  id: string;
+  userId: string;
   code: string;
-  status: 'open' | 'closed';
-  totalTime: number;
+  title: string;
+  description: string;
+  requester: string;
+  category: string;
+  status: RitmStatusValue;
+  pendingReason: string;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export type TimerStatus = 'stopped' | 'running' | 'paused';
+export interface RitmHistoryEntry {
+  id: string;
+  ritmId: string;
+  userId: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  createdAt: string;
+}
 
-export interface TimerState {
-  status: TimerStatus;
-  startTime: number | null;
-  accumulatedTime: number;
-  currentActivity: string;
+export type RitmInput = {
+  code: string;
+  title: string;
+  description: string;
+  requester: string;
+  category: string;
+  status: RitmStatusValue;
+  pendingReason: string;
+};
+
+export type TimerStatus = 'running' | 'paused';
+
+export interface RunningTimer {
+  id: string; // local id
+  activity: string;
   ritmCode: string;
+  status: TimerStatus;
+  startTime: number | null; // ms epoch when running
+  accumulatedTime: number; // ms
+  createdAt: number;
+  urgent?: boolean;
 }
