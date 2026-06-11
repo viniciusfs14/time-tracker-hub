@@ -12,7 +12,7 @@ import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { formatTime, formatTimeShort } from '@/utils/time';
 
 export function EmployeeDashboard() {
-  const { timer, getTodayTotal, getEntriesByPeriod } = useTimeTracker();
+  const { timers, getTodayTotal, getEntriesByPeriod } = useTimeTracker();
 
   const stats = useMemo(() => {
     const todayTotal = getTodayTotal();
@@ -20,20 +20,22 @@ export function EmployeeDashboard() {
     const weekTotal = weekEntries.reduce((sum, e) => sum + e.duration, 0);
     const tasksToday = getEntriesByPeriod(1).length;
 
-    // Add current timer if running
-    let currentSession = 0;
-    if (timer.status === 'running' && timer.startTime) {
-      currentSession = Math.floor((Date.now() - timer.startTime + timer.accumulatedTime) / 1000);
-    } else if (timer.status === 'paused') {
-      currentSession = Math.floor(timer.accumulatedTime / 1000);
-    }
+    // Add all active timers' running time
+    const activeSession = timers.reduce((sum, t) => {
+      const ms =
+        t.status === 'running'
+          ? t.accumulatedTime + (Date.now() - (t.startTime || Date.now()))
+          : t.accumulatedTime;
+      return sum + Math.floor(ms / 1000);
+    }, 0);
 
     return {
-      todayTotal: todayTotal + currentSession,
+      todayTotal: todayTotal + activeSession,
       weekTotal,
-      tasksToday: tasksToday + (timer.status !== 'stopped' ? 1 : 0),
+      tasksToday: tasksToday + timers.length,
     };
-  }, [timer, getTodayTotal, getEntriesByPeriod]);
+  }, [timers, getTodayTotal, getEntriesByPeriod]);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
