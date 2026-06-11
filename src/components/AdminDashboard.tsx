@@ -1,14 +1,23 @@
 import { useMemo, useState } from 'react';
-import { Users, Clock, BarChart3, Calendar, Filter, Ticket, Lock, Unlock } from 'lucide-react';
+import { Clock, BarChart3, Calendar, Filter, Ticket, CircleDot, PauseCircle, CheckCircle2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { StatsCard } from '@/components/StatsCard';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
-import { formatTime, formatDate, extractRitmCode } from '@/utils/time';
+import { RitmStatusValue } from '@/types';
+import { formatTime, formatDate } from '@/utils/time';
 import { cn } from '@/lib/utils';
 
+const STATUS_META: Record<RitmStatusValue, { label: string; icon: typeof CircleDot; cls: string; border: string }> = {
+  open: { label: 'Em andamento', icon: CircleDot, cls: 'bg-success/10 text-success border-success/30', border: 'border-success' },
+  pending: { label: 'Pendente', icon: PauseCircle, cls: 'bg-warning/10 text-warning border-warning/30', border: 'border-warning' },
+  closed: { label: 'Encerrado', icon: CheckCircle2, cls: 'bg-muted text-muted-foreground border-border', border: 'border-muted-foreground' },
+};
+
+
 export function AdminDashboard() {
-  const { entries, ritmStatuses, getProfileName } = useTimeTracker();
+  const { entries, ritms, getProfileName } = useTimeTracker();
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<string>('all');
 
@@ -43,28 +52,22 @@ export function AdminDashboard() {
   }, [filteredEntries]);
 
   const ritmSummary = useMemo(() => {
-    const ritmMap = new Map<string, { code: string; totalTime: number; status: 'open' | 'closed' }>();
-
-    entries.forEach(entry => {
-      const code = entry.ritmCode || extractRitmCode(entry.activity);
+    // Total time per code across all users' entries
+    const timeByCode = new Map<string, number>();
+    entries.forEach((entry) => {
+      const code = (entry.ritmCode || '').toUpperCase();
       if (!code) return;
-
-      const ritmStatus = ritmStatuses.find(r => r.code === code);
-      const existing = ritmMap.get(code);
-
-      if (existing) {
-        existing.totalTime += entry.duration;
-      } else {
-        ritmMap.set(code, {
-          code,
-          totalTime: entry.duration,
-          status: ritmStatus?.status || 'open',
-        });
-      }
+      timeByCode.set(code, (timeByCode.get(code) || 0) + entry.duration);
     });
 
-    return Array.from(ritmMap.values());
-  }, [entries, ritmStatuses]);
+    return ritms
+      .map((r) => ({
+        ...r,
+        totalTime: timeByCode.get(r.code.toUpperCase()) || 0,
+      }))
+      .sort((a, b) => b.totalTime - a.totalTime);
+  }, [entries, ritms]);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -195,46 +198,54 @@ export function AdminDashboard() {
 
         <TabsContent value="ritms" className="space-y-6">
           <div className="glass-card rounded-2xl p-6">
-            <h3 className="font-semibold mb-4">Status dos Chamados</h3>
-            
+            <h3 className="font-semibold mb-4">Chamados da equipe</h3>
+
             {ritmSummary.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                Nenhum RITM encontrado nos registros.
+                Nenhum chamado cadastrado pela equipe.
               </p>
             ) : (
               <div className="space-y-3">
-                {ritmSummary.map(ritm => (
-                  <div
-                    key={ritm.code}
-                    className={cn(
-                      "p-4 rounded-xl border-l-4",
-                      ritm.status === 'open'
-                        ? "bg-success/5 border-success"
-                        : "bg-muted/50 border-muted-foreground"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-lg">{ritm.code}</h4>
-                        <p className="text-sm text-muted-foreground flex items-center gap-2">
-                          {ritm.status === 'open' ? (
-                            <><Unlock className="w-4 h-4 text-success" /> Em Andamento</>
-                          ) : (
-                            <><Lock className="w-4 h-4" /> Encerrado</>
+                {ritmSummary.map((ritm) => {
+                  const meta = STATUS_META[ritm.status];
+                  const StatusIcon = meta.icon;
+                  return (
+                    <div
+                      key={ritm.id}
+                      className={cn('p-4 rounded-xl border-l-4 bg-card/40', meta.border, ritm.archived && 'opacity-60')}
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold font-mono text-lg">{ritm.code}</h4>
+                            <Badge variant="outline" className={cn('gap-1', meta.cls)}>
+                              <StatusIcon className="w-3 h-3" /> {meta.label}
+                            </Badge>
+                            {ritm.archived && <Badge variant="secondary">Arquivado</Badge>}
+                            {ritm.category && <Badge variant="secondary" className="font-normal">{ritm.category}</Badge>}
+                          </div>
+                          {ritm.title && <p className="font-medium">{ritm.title}</p>}
+                          <p className="text-sm text-muted-foreground">
+                            Responsável: {getProfileName(ritm.userId)}
+                            {ritm.requester ? ` • Solicitante: ${ritm.requester}` : ''}
+                          </p>
+                          {ritm.status === 'pending' && ritm.pendingReason && (
+                            <p className="text-sm text-warning">Pendência: {ritm.pendingReason}</p>
                           )}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono font-bold text-primary">{formatTime(ritm.totalTime)}</p>
-                        <p className="text-xs text-muted-foreground">tempo total</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-mono font-bold text-primary">{formatTime(ritm.totalTime)}</p>
+                          <p className="text-xs text-muted-foreground">tempo total</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );
