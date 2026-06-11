@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Clock, Calendar, Target, StickyNote } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Timer } from '@/components/Timer';
+import { TimersPanel } from '@/components/TimersPanel';
 import { ManualEntry } from '@/components/ManualEntry';
 import { RitmManager } from '@/components/RitmManager';
 import { ActivityChart } from '@/components/ActivityChart';
