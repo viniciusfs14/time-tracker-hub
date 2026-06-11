@@ -198,46 +198,54 @@ export function AdminDashboard() {
 
         <TabsContent value="ritms" className="space-y-6">
           <div className="glass-card rounded-2xl p-6">
-            <h3 className="font-semibold mb-4">Status dos Chamados</h3>
-            
+            <h3 className="font-semibold mb-4">Chamados da equipe</h3>
+
             {ritmSummary.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                Nenhum RITM encontrado nos registros.
+                Nenhum chamado cadastrado pela equipe.
               </p>
             ) : (
               <div className="space-y-3">
-                {ritmSummary.map(ritm => (
-                  <div
-                    key={ritm.code}
-                    className={cn(
-                      "p-4 rounded-xl border-l-4",
-                      ritm.status === 'open'
-                        ? "bg-success/5 border-success"
-                        : "bg-muted/50 border-muted-foreground"
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold text-lg">{ritm.code}</h4>
-                        <p className="text-sm text-muted-foreground flex items-center gap-2">
-                          {ritm.status === 'open' ? (
-                            <><Unlock className="w-4 h-4 text-success" /> Em Andamento</>
-                          ) : (
-                            <><Lock className="w-4 h-4" /> Encerrado</>
+                {ritmSummary.map((ritm) => {
+                  const meta = STATUS_META[ritm.status];
+                  const StatusIcon = meta.icon;
+                  return (
+                    <div
+                      key={ritm.id}
+                      className={cn('p-4 rounded-xl border-l-4 bg-card/40', meta.border, ritm.archived && 'opacity-60')}
+                    >
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-semibold font-mono text-lg">{ritm.code}</h4>
+                            <Badge variant="outline" className={cn('gap-1', meta.cls)}>
+                              <StatusIcon className="w-3 h-3" /> {meta.label}
+                            </Badge>
+                            {ritm.archived && <Badge variant="secondary">Arquivado</Badge>}
+                            {ritm.category && <Badge variant="secondary" className="font-normal">{ritm.category}</Badge>}
+                          </div>
+                          {ritm.title && <p className="font-medium">{ritm.title}</p>}
+                          <p className="text-sm text-muted-foreground">
+                            Responsável: {getProfileName(ritm.userId)}
+                            {ritm.requester ? ` • Solicitante: ${ritm.requester}` : ''}
+                          </p>
+                          {ritm.status === 'pending' && ritm.pendingReason && (
+                            <p className="text-sm text-warning">Pendência: {ritm.pendingReason}</p>
                           )}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-mono font-bold text-primary">{formatTime(ritm.totalTime)}</p>
-                        <p className="text-xs text-muted-foreground">tempo total</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-mono font-bold text-primary">{formatTime(ritm.totalTime)}</p>
+                          <p className="text-xs text-muted-foreground">tempo total</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </TabsContent>
+
       </Tabs>
     </div>
   );
