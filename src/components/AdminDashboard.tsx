@@ -1,11 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Users, Clock, BarChart3, Calendar, Filter, Ticket, Lock, Unlock } from 'lucide-react';
+import { Clock, BarChart3, Calendar, Filter, Ticket, CircleDot, PauseCircle, CheckCircle2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { StatsCard } from '@/components/StatsCard';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
-import { formatTime, formatDate, extractRitmCode } from '@/utils/time';
+import { RitmStatusValue } from '@/types';
+import { formatTime, formatDate } from '@/utils/time';
 import { cn } from '@/lib/utils';
+
+const STATUS_META: Record<RitmStatusValue, { label: string; icon: typeof CircleDot; cls: string; border: string }> = {
+  open: { label: 'Em andamento', icon: CircleDot, cls: 'bg-success/10 text-success border-success/30', border: 'border-success' },
+  pending: { label: 'Pendente', icon: PauseCircle, cls: 'bg-warning/10 text-warning border-warning/30', border: 'border-warning' },
+  closed: { label: 'Encerrado', icon: CheckCircle2, cls: 'bg-muted text-muted-foreground border-border', border: 'border-muted-foreground' },
+};
+
 
 export function AdminDashboard() {
   const { entries, ritmStatuses, getProfileName } = useTimeTracker();
