@@ -52,28 +52,22 @@ export function AdminDashboard() {
   }, [filteredEntries]);
 
   const ritmSummary = useMemo(() => {
-    const ritmMap = new Map<string, { code: string; totalTime: number; status: 'open' | 'closed' }>();
-
-    entries.forEach(entry => {
-      const code = entry.ritmCode || extractRitmCode(entry.activity);
+    // Total time per code across all users' entries
+    const timeByCode = new Map<string, number>();
+    entries.forEach((entry) => {
+      const code = (entry.ritmCode || '').toUpperCase();
       if (!code) return;
-
-      const ritmStatus = ritmStatuses.find(r => r.code === code);
-      const existing = ritmMap.get(code);
-
-      if (existing) {
-        existing.totalTime += entry.duration;
-      } else {
-        ritmMap.set(code, {
-          code,
-          totalTime: entry.duration,
-          status: ritmStatus?.status || 'open',
-        });
-      }
+      timeByCode.set(code, (timeByCode.get(code) || 0) + entry.duration);
     });
 
-    return Array.from(ritmMap.values());
-  }, [entries, ritmStatuses]);
+    return ritms
+      .map((r) => ({
+        ...r,
+        totalTime: timeByCode.get(r.code.toUpperCase()) || 0,
+      }))
+      .sort((a, b) => b.totalTime - a.totalTime);
+  }, [entries, ritms]);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
