@@ -62,6 +62,44 @@ export type Database = {
         }
         Relationships: []
       }
+      ritm_history: {
+        Row: {
+          created_at: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          ritm_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          ritm_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          ritm_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ritm_history_ritm_id_fkey"
+            columns: ["ritm_id"]
+            isOneToOne: false
+            referencedRelation: "ritms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ritm_statuses: {
         Row: {
           code: string
@@ -87,6 +125,51 @@ export type Database = {
           id?: string
           status?: string
           total_time?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ritms: {
+        Row: {
+          archived: boolean
+          category: string
+          code: string
+          created_at: string
+          description: string
+          id: string
+          pending_reason: string
+          requester: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          category?: string
+          code: string
+          created_at?: string
+          description?: string
+          id?: string
+          pending_reason?: string
+          requester?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          pending_reason?: string
+          requester?: string
+          status?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
