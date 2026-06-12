@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Clock, Calendar, Target, StickyNote } from 'lucide-react';
+import { Clock, Calendar, Target, StickyNote, Link2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimersPanel } from '@/components/TimersPanel';
 import { ManualEntry } from '@/components/ManualEntry';
@@ -8,8 +8,10 @@ import { ActivityChart } from '@/components/ActivityChart';
 import { RecentEntries } from '@/components/RecentEntries';
 import { StatsCard } from '@/components/StatsCard';
 import { NotesPanel } from '@/components/NotesPanel';
+import { UsefulLinksPanel } from '@/components/UsefulLinksPanel';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { formatTime, formatTimeShort } from '@/utils/time';
+
 
 export function EmployeeDashboard() {
   const { timers, getTodayTotal, getEntriesByPeriod } = useTimeTracker();
