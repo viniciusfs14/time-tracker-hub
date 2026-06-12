@@ -76,16 +76,30 @@ export function RitmManager() {
 
   const handleEmail = (ritm: Ritm) => {
     const subject = encodeURIComponent(`Chamado ${ritm.code}${ritm.title ? ` - ${ritm.title}` : ''}`);
-    const body = encodeURIComponent(
-      `Prezados,\n\nSegue atualização do chamado ${ritm.code}.\n\n` +
-        `Status: ${STATUS_META[ritm.status].label}\n` +
-        (ritm.status === 'pending' && ritm.pendingReason ? `Motivo da pendência: ${ritm.pendingReason}\n` : '') +
-        (ritm.requester ? `Solicitante: ${ritm.requester}\n` : '') +
-        `Tempo total investido: ${formatTime(getRitmTotalTime(ritm.code))}\n\n` +
-        `Atenciosamente,\n${user?.name ?? ''}`
-    );
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    const lines = [
+      'Prezados,',
+      '',
+      `Segue atualização do item requisitado ${ritm.code}.`,
+      '',
+      `Status: ${STATUS_META[ritm.status].label}`,
+      ritm.status === 'pending' && ritm.pendingReason ? `Motivo da pendência: ${ritm.pendingReason}` : '',
+      ritm.requestType ? `Tipo de solicitação: ${ritm.requestType}` : '',
+      ritm.requester ? `Solicitante: ${ritm.requester}` : '',
+      ritm.requesterEmail ? `Email do solicitante: ${ritm.requesterEmail}` : '',
+      ritm.operationalUnit ? `Unidade Operacional: ${ritm.operationalUnit}` : '',
+      ritm.locality ? `Localidade: ${ritm.locality}` : '',
+      ritm.pims ? `PIMS: ${ritm.pims}` : '',
+      ritm.pep ? `PEP: ${ritm.pep}` : '',
+      ritm.observation ? `Observação: ${ritm.observation}` : '',
+      `Tempo total investido: ${formatTime(getRitmTotalTime(ritm.code))}`,
+      '',
+      'Atenciosamente,',
+      user?.name ?? '',
+    ];
+    const body = encodeURIComponent(lines.filter((l) => l !== '').join('\n'));
+    window.open(`mailto:${ritm.requesterEmail ? encodeURIComponent(ritm.requesterEmail) : ''}?subject=${subject}&body=${body}`, '_blank');
   };
+
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
