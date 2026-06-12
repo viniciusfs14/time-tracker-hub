@@ -43,18 +43,21 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           id: string
           name: string
           updated_at: string
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           id: string
           name?: string
           updated_at?: string
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -138,8 +141,15 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          locality: string
+          observation: string
+          operational_unit: string
           pending_reason: string
+          pep: string
+          pims: string
+          request_type: string
           requester: string
+          requester_email: string
           status: string
           title: string
           updated_at: string
@@ -152,8 +162,15 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          locality?: string
+          observation?: string
+          operational_unit?: string
           pending_reason?: string
+          pep?: string
+          pims?: string
+          request_type?: string
           requester?: string
+          requester_email?: string
           status?: string
           title?: string
           updated_at?: string
@@ -166,8 +183,15 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          locality?: string
+          observation?: string
+          operational_unit?: string
           pending_reason?: string
+          pep?: string
+          pims?: string
+          request_type?: string
           requester?: string
+          requester_email?: string
           status?: string
           title?: string
           updated_at?: string
@@ -210,6 +234,36 @@ export type Database = {
           ritm_code?: string | null
           start_time?: string
           type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      useful_links: {
+        Row: {
+          created_at: string
+          hotkey: string
+          id: string
+          title: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hotkey?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hotkey?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          url?: string
           user_id?: string
         }
         Relationships: []
