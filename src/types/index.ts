@@ -3,6 +3,7 @@ export interface User {
   name: string;
   role: 'admin' | 'employee';
   avatar?: string;
+  avatarUrl?: string;
 }
 
 export interface TimeEntry {
@@ -20,9 +21,13 @@ export interface TimeEntry {
 export interface Profile {
   id: string;
   name: string;
+  avatarUrl?: string | null;
 }
 
 export type RitmStatusValue = 'open' | 'pending' | 'closed';
+
+export type LocalityValue = '' | 'Salobo/Sossego' | 'Ferrosos';
+export type PimsValue = '' | 'PI System Sul/Sudeste' | 'PI System Vitória';
 
 export interface Ritm {
   id: string;
@@ -34,6 +39,13 @@ export interface Ritm {
   category: string;
   status: RitmStatusValue;
   pendingReason: string;
+  requestType: string;
+  operationalUnit: string;
+  requesterEmail: string;
+  locality: LocalityValue;
+  pims: PimsValue;
+  pep: string;
+  observation: string;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +69,13 @@ export type RitmInput = {
   category: string;
   status: RitmStatusValue;
   pendingReason: string;
+  requestType: string;
+  operationalUnit: string;
+  requesterEmail: string;
+  locality: LocalityValue;
+  pims: PimsValue;
+  pep: string;
+  observation: string;
 };
 
 export type TimerStatus = 'running' | 'paused';
@@ -71,3 +90,18 @@ export interface RunningTimer {
   createdAt: number;
   urgent?: boolean;
 }
+
+export interface UsefulLink {
+  id: string;
+  userId: string;
+  title: string;
+  url: string;
+  hotkey: string;
+  createdAt: string;
+}
+
+export type UsefulLinkInput = {
+  title: string;
+  url: string;
+  hotkey: string;
+};

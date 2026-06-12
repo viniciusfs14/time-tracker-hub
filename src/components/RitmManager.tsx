@@ -76,16 +76,30 @@ export function RitmManager() {
 
   const handleEmail = (ritm: Ritm) => {
     const subject = encodeURIComponent(`Chamado ${ritm.code}${ritm.title ? ` - ${ritm.title}` : ''}`);
-    const body = encodeURIComponent(
-      `Prezados,\n\nSegue atualização do chamado ${ritm.code}.\n\n` +
-        `Status: ${STATUS_META[ritm.status].label}\n` +
-        (ritm.status === 'pending' && ritm.pendingReason ? `Motivo da pendência: ${ritm.pendingReason}\n` : '') +
-        (ritm.requester ? `Solicitante: ${ritm.requester}\n` : '') +
-        `Tempo total investido: ${formatTime(getRitmTotalTime(ritm.code))}\n\n` +
-        `Atenciosamente,\n${user?.name ?? ''}`
-    );
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    const lines = [
+      'Prezados,',
+      '',
+      `Segue atualização do item requisitado ${ritm.code}.`,
+      '',
+      `Status: ${STATUS_META[ritm.status].label}`,
+      ritm.status === 'pending' && ritm.pendingReason ? `Motivo da pendência: ${ritm.pendingReason}` : '',
+      ritm.requestType ? `Tipo de solicitação: ${ritm.requestType}` : '',
+      ritm.requester ? `Solicitante: ${ritm.requester}` : '',
+      ritm.requesterEmail ? `Email do solicitante: ${ritm.requesterEmail}` : '',
+      ritm.operationalUnit ? `Unidade Operacional: ${ritm.operationalUnit}` : '',
+      ritm.locality ? `Localidade: ${ritm.locality}` : '',
+      ritm.pims ? `PIMS: ${ritm.pims}` : '',
+      ritm.pep ? `PEP: ${ritm.pep}` : '',
+      ritm.observation ? `Observação: ${ritm.observation}` : '',
+      `Tempo total investido: ${formatTime(getRitmTotalTime(ritm.code))}`,
+      '',
+      'Atenciosamente,',
+      user?.name ?? '',
+    ];
+    const body = encodeURIComponent(lines.filter((l) => l !== '').join('\n'));
+    window.open(`mailto:${ritm.requesterEmail ? encodeURIComponent(ritm.requesterEmail) : ''}?subject=${subject}&body=${body}`, '_blank');
   };
+
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -147,12 +161,36 @@ export function RitmManager() {
                       )}
                     </div>
                     {ritm.title && <p className="font-medium">{ritm.title}</p>}
+                    {ritm.requestType && (
+                      <p className="text-sm text-muted-foreground">Tipo: {ritm.requestType}</p>
+                    )}
                     {ritm.requester && (
-                      <p className="text-sm text-muted-foreground">Solicitante: {ritm.requester}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Solicitante: {ritm.requester}
+                        {ritm.requesterEmail ? ` (${ritm.requesterEmail})` : ''}
+                      </p>
+                    )}
+                    {ritm.operationalUnit && (
+                      <p className="text-sm text-muted-foreground">Unidade: {ritm.operationalUnit}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {ritm.locality && (
+                        <Badge variant="outline" className="font-normal">{ritm.locality}</Badge>
+                      )}
+                      {ritm.pims && (
+                        <Badge variant="outline" className="font-normal">{ritm.pims}</Badge>
+                      )}
+                      {ritm.pep && (
+                        <Badge variant="outline" className="font-normal font-mono">PEP: {ritm.pep}</Badge>
+                      )}
+                    </div>
+                    {ritm.observation && (
+                      <p className="text-sm text-muted-foreground">Obs: {ritm.observation}</p>
                     )}
                     {ritm.status === 'pending' && ritm.pendingReason && (
                       <p className="text-sm text-warning">Pendência: {ritm.pendingReason}</p>
                     )}
+
                     <p className="text-sm text-muted-foreground">
                       Tempo total:{' '}
                       <span className="font-mono font-medium text-foreground">

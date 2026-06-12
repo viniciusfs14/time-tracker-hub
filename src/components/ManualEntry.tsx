@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PenLine, Plus } from 'lucide-react';
+import { PenLine, Plus, Ticket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,12 +9,13 @@ import { toast } from 'sonner';
 export function ManualEntry() {
   const { addManualEntry } = useTimeTracker();
   const [activity, setActivity] = useState('');
+  const [ritmCode, setRitmCode] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!activity.trim() || !startTime || !endTime) {
       toast.error('Preencha todos os campos');
       return;
@@ -22,19 +23,22 @@ export function ManualEntry() {
 
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
-    
+
     const startMinutes = startHour * 60 + startMin;
     const endMinutes = endHour * 60 + endMin;
-    
+
     if (endMinutes <= startMinutes) {
       toast.error('Hora final deve ser maior que a hora inicial');
       return;
     }
 
-    addManualEntry(activity, startTime, endTime);
-    toast.success('Registro adicionado!');
-    
+    addManualEntry(activity, startTime, endTime, ritmCode.trim() || undefined);
+    toast.success(
+      ritmCode.trim() ? 'Registro adicionado e chamado vinculado!' : 'Registro adicionado!'
+    );
+
     setActivity('');
+    setRitmCode('');
     setStartTime('');
     setEndTime('');
   };
@@ -51,15 +55,34 @@ export function ManualEntry() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="manualActivity" className="text-sm font-medium">
-            Atividade (inclua o código RITM se houver)
+            Atividade
           </Label>
           <Input
             id="manualActivity"
-            placeholder="Ex: Reunião com equipe [RITM001234]"
+            placeholder="Ex: Reunião com equipe"
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
             className="h-12"
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="manualRitm" className="text-sm font-medium">
+            RITM (opcional)
+          </Label>
+          <div className="relative">
+            <Ticket className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              id="manualRitm"
+              placeholder="RITM0001234"
+              value={ritmCode}
+              onChange={(e) => setRitmCode(e.target.value)}
+              className="h-12 pl-9 font-mono"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Se informado, o chamado é criado automaticamente na aba Chamados.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

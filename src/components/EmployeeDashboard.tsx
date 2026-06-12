@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Clock, Calendar, Target, StickyNote } from 'lucide-react';
+import { Clock, Calendar, Target, StickyNote, Link2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimersPanel } from '@/components/TimersPanel';
 import { ManualEntry } from '@/components/ManualEntry';
@@ -8,8 +8,10 @@ import { ActivityChart } from '@/components/ActivityChart';
 import { RecentEntries } from '@/components/RecentEntries';
 import { StatsCard } from '@/components/StatsCard';
 import { NotesPanel } from '@/components/NotesPanel';
+import { UsefulLinksPanel } from '@/components/UsefulLinksPanel';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { formatTime, formatTimeShort } from '@/utils/time';
+
 
 export function EmployeeDashboard() {
   const { timers, getTodayTotal, getEntriesByPeriod } = useTimeTracker();
@@ -86,11 +88,20 @@ export function EmployeeDashboard() {
             <StickyNote className="w-4 h-4" />
             Notas
           </TabsTrigger>
+          <TabsTrigger value="links" className="gap-2">
+            <Link2 className="w-4 h-4" />
+            Links Úteis
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="notes" className="mt-0">
           <NotesPanel />
         </TabsContent>
+
+        <TabsContent value="links" className="mt-0">
+          <UsefulLinksPanel />
+        </TabsContent>
+
 
         <div className="grid lg:grid-cols-2 gap-6">
           <TabsContent value="timer" className="mt-0">

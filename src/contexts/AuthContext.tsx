@@ -13,9 +13,18 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
   logout: () => Promise<void>;
+  updateAvatar: (file: File) => Promise<{ error?: string }>;
+  removeAvatar: () => Promise<{ error?: string }>;
+  updateName: (name: string) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+async function signedUrlFor(path: string | null | undefined): Promise<string | undefined> {
+  if (!path) return undefined;
+  const { data } = await supabase.storage.from('avatars').createSignedUrl(path, 60 * 60 * 24 * 7);
+  return data?.signedUrl ? `${data.signedUrl}` : undefined;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -24,15 +33,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserDetails = useCallback(async (userId: string, fallbackName: string) => {
     const [{ data: profile }, { data: roles }] = await Promise.all([
-      supabase.from('profiles').select('name').eq('id', userId).maybeSingle(),
+      supabase.from('profiles').select('name, avatar_url').eq('id', userId).maybeSingle(),
       supabase.from('user_roles').select('role').eq('user_id', userId),
     ]);
 
     const isAdmin = (roles ?? []).some((r) => r.role === 'admin');
+    const avatarUrl = await signedUrlFor((profile as { avatar_url?: string } | null)?.avatar_url);
     setUser({
       id: userId,
       name: profile?.name || fallbackName,
       role: isAdmin ? 'admin' : 'employee',
+      avatarUrl,
     });
   }, []);
 
@@ -88,6 +99,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   }, []);
 
+  const updateAvatar = useCallback(
+    async (file: File) => {
+      if (!session?.user) return { error: 'Não autenticado' };
+      const userId = session.user.id;
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const path = `${userId}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) return { error: uploadError.message };
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: path })
+        .eq('id', userId);
+      if (profileError) return { error: profileError.message };
+
+      const avatarUrl = await signedUrlFor(path);
+      setUser((u) => (u ? { ...u, avatarUrl } : u));
+      return {};
+    },
+    [session]
+  );
+
+  const removeAvatar = useCallback(async () => {
+    if (!session?.user) return { error: 'Não autenticado' };
+    const userId = session.user.id;
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', userId);
+    if (error) return { error: error.message };
+    await supabase.storage.from('avatars').remove([`${userId}/avatar.png`, `${userId}/avatar.jpg`, `${userId}/avatar.jpeg`, `${userId}/avatar.webp`]);
+    setUser((u) => (u ? { ...u, avatarUrl: undefined } : u));
+    return {};
+  }, [session]);
+
+  const updateName = useCallback(
+    async (name: string) => {
+      if (!session?.user) return { error: 'Não autenticado' };
+      const { error } = await supabase.from('profiles').update({ name }).eq('id', session.user.id);
+      if (error) return { error: error.message };
+      setUser((u) => (u ? { ...u, name } : u));
+      return {};
+    },
+    [session]
+  );
+
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -105,6 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signInWithGoogle,
         logout,
+        updateAvatar,
+        removeAvatar,
+        updateName,
       }}
     >
       {children}

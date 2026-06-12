@@ -1,10 +1,12 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { LogOut, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGreeting, formatDate } from '@/utils/time';
 import { ThemeToggle } from './ThemeToggle';
+import { ProfileDialog } from './ProfileDialog';
+import { useLinkHotkeys } from '@/hooks/use-link-hotkeys';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,6 +14,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  useLinkHotkeys();
 
   if (!user) return null;
 
@@ -32,19 +36,25 @@ export function Layout({ children }: LayoutProps) {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setProfileOpen(true)}
+                className="flex items-center gap-3 rounded-xl px-1 py-1 hover:bg-muted/50 transition-colors"
+                title="Editar perfil"
+              >
                 <Avatar className="w-9 h-9 border-2 border-primary/20">
+                  {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
                   <AvatarFallback className="bg-primary/10 text-primary font-medium">
                     {user.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden sm:block">
+                <div className="hidden sm:block text-left">
                   <p className="text-sm font-medium">{getGreeting()}, <span className="text-primary">{user.name}</span></p>
                   <p className="text-xs text-muted-foreground capitalize">
                     {user.role === 'admin' ? 'Administrador' : 'Funcionário'}
                   </p>
                 </div>
-              </div>
+              </button>
               <ThemeToggle />
               <Button
                 variant="ghost"
@@ -63,6 +73,8 @@ export function Layout({ children }: LayoutProps) {
       <main className="container mx-auto px-4 py-6 md:py-8">
         {children}
       </main>
+
+      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   );
 }
