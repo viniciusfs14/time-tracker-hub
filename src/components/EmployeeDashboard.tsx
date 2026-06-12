@@ -88,11 +88,20 @@ export function EmployeeDashboard() {
             <StickyNote className="w-4 h-4" />
             Notas
           </TabsTrigger>
+          <TabsTrigger value="links" className="gap-2">
+            <Link2 className="w-4 h-4" />
+            Links Úteis
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="notes" className="mt-0">
           <NotesPanel />
         </TabsContent>
+
+        <TabsContent value="links" className="mt-0">
+          <UsefulLinksPanel />
+        </TabsContent>
+
 
         <div className="grid lg:grid-cols-2 gap-6">
           <TabsContent value="timer" className="mt-0">
