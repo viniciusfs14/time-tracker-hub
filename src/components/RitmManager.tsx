@@ -161,12 +161,36 @@ export function RitmManager() {
                       )}
                     </div>
                     {ritm.title && <p className="font-medium">{ritm.title}</p>}
+                    {ritm.requestType && (
+                      <p className="text-sm text-muted-foreground">Tipo: {ritm.requestType}</p>
+                    )}
                     {ritm.requester && (
-                      <p className="text-sm text-muted-foreground">Solicitante: {ritm.requester}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Solicitante: {ritm.requester}
+                        {ritm.requesterEmail ? ` (${ritm.requesterEmail})` : ''}
+                      </p>
+                    )}
+                    {ritm.operationalUnit && (
+                      <p className="text-sm text-muted-foreground">Unidade: {ritm.operationalUnit}</p>
+                    )}
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {ritm.locality && (
+                        <Badge variant="outline" className="font-normal">{ritm.locality}</Badge>
+                      )}
+                      {ritm.pims && (
+                        <Badge variant="outline" className="font-normal">{ritm.pims}</Badge>
+                      )}
+                      {ritm.pep && (
+                        <Badge variant="outline" className="font-normal font-mono">PEP: {ritm.pep}</Badge>
+                      )}
+                    </div>
+                    {ritm.observation && (
+                      <p className="text-sm text-muted-foreground">Obs: {ritm.observation}</p>
                     )}
                     {ritm.status === 'pending' && ritm.pendingReason && (
                       <p className="text-sm text-warning">Pendência: {ritm.pendingReason}</p>
                     )}
+
                     <p className="text-sm text-muted-foreground">
                       Tempo total:{' '}
                       <span className="font-mono font-medium text-foreground">
