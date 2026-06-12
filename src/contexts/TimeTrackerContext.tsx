@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { TimeEntry, RunningTimer, Ritm, RitmInput, RitmHistoryEntry, Profile, RitmStatusValue } from '@/types';
+import { TimeEntry, RunningTimer, Ritm, RitmInput, RitmHistoryEntry, Profile, RitmStatusValue, LocalityValue, PimsValue, UsefulLink, UsefulLinkInput } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 
@@ -8,6 +8,7 @@ interface TimeTrackerContextType {
   entries: TimeEntry[];
   ritms: Ritm[];
   profiles: Profile[];
+  usefulLinks: UsefulLink[];
   loading: boolean;
   // timers
   addTimer: (activity?: string, ritmCode?: string, opts?: { urgent?: boolean }) => string;
@@ -26,6 +27,10 @@ interface TimeTrackerContextType {
   setRitmArchived: (id: string, archived: boolean) => Promise<void>;
   deleteRitm: (id: string) => Promise<void>;
   getRitmHistory: (ritmId: string) => Promise<RitmHistoryEntry[]>;
+  // useful links
+  addLink: (data: UsefulLinkInput) => Promise<{ error?: string }>;
+  updateLink: (id: string, data: UsefulLinkInput) => Promise<{ error?: string }>;
+  deleteLink: (id: string) => Promise<void>;
   // stats
   getTodayTotal: () => number;
   getEntriesByPeriod: (days: number) => TimeEntry[];
@@ -60,9 +65,25 @@ const mapRitm = (r: any): Ritm => ({
   category: r.category ?? '',
   status: (r.status as RitmStatusValue) ?? 'open',
   pendingReason: r.pending_reason ?? '',
+  requestType: r.request_type ?? '',
+  operationalUnit: r.operational_unit ?? '',
+  requesterEmail: r.requester_email ?? '',
+  locality: (r.locality as LocalityValue) ?? '',
+  pims: (r.pims as PimsValue) ?? '',
+  pep: r.pep ?? '',
+  observation: r.observation ?? '',
   archived: !!r.archived,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+});
+
+const mapLink = (r: any): UsefulLink => ({
+  id: r.id,
+  userId: r.user_id,
+  title: r.title ?? '',
+  url: r.url,
+  hotkey: r.hotkey ?? '',
+  createdAt: r.created_at,
 });
 
 const localId = () =>
@@ -71,15 +92,57 @@ const localId = () =>
     : `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
 const FIELD_LABELS: Record<string, string> = {
-  code: 'Código',
+  code: 'Item requisitado',
   title: 'Título',
   description: 'Descrição',
   requester: 'Solicitante',
   category: 'Categoria',
   status: 'Status',
   pendingReason: 'Motivo da pendência',
+  requestType: 'Tipo de solicitação',
+  operationalUnit: 'Unidade Operacional',
+  requesterEmail: 'Email do solicitante',
+  locality: 'Localidade',
+  pims: 'PIMS',
+  pep: 'PEP',
+  observation: 'Observação',
   created: 'Chamado',
+  archived: 'Arquivamento',
 };
+
+const toRow = (data: RitmInput) => ({
+  code: data.code.trim(),
+  title: data.title,
+  description: data.description,
+  requester: data.requester,
+  category: data.category,
+  status: data.status,
+  pending_reason: data.status === 'pending' ? data.pendingReason : '',
+  request_type: data.requestType,
+  operational_unit: data.operationalUnit,
+  requester_email: data.requesterEmail,
+  locality: data.locality,
+  pims: data.pims,
+  pep: data.pep,
+  observation: data.observation,
+});
+
+const TRACKED_FIELDS: (keyof RitmInput)[] = [
+  'code',
+  'title',
+  'description',
+  'requester',
+  'category',
+  'status',
+  'pendingReason',
+  'requestType',
+  'operationalUnit',
+  'requesterEmail',
+  'locality',
+  'pims',
+  'pep',
+  'observation',
+];
 
 export function TimeTrackerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -87,6 +150,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [ritms, setRitms] = useState<Ritm[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [usefulLinks, setUsefulLinks] = useState<UsefulLink[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [timers, setTimers] = useState<RunningTimer[]>(() => {
@@ -107,18 +171,21 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
       setEntries([]);
       setRitms([]);
       setProfiles([]);
+      setUsefulLinks([]);
       return;
     }
     setLoading(true);
-    const [entriesRes, ritmsRes, profilesRes] = await Promise.all([
+    const [entriesRes, ritmsRes, profilesRes, linksRes] = await Promise.all([
       supabase.from('time_entries').select('*').order('start_time', { ascending: false }),
       supabase.from('ritms').select('*').order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id, name'),
+      supabase.from('profiles').select('id, name, avatar_url'),
+      supabase.from('useful_links').select('*').order('created_at', { ascending: false }),
     ]);
 
     if (entriesRes.data) setEntries(entriesRes.data.map(mapEntry));
     if (ritmsRes.data) setRitms(ritmsRes.data.map(mapRitm));
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
+    if (linksRes.data) setUsefulLinks(linksRes.data.map(mapLink));
     setLoading(false);
   }, [user]);
 
@@ -211,6 +278,38 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     setTimers((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // Cria automaticamente um chamado quando um RITM é associado a um registro,
+  // caso ainda não exista um chamado com esse código para o usuário.
+  const ensureRitm = useCallback(
+    async (code: string) => {
+      const trimmed = code.trim();
+      if (!trimmed || !user) return;
+      const { data: existing } = await supabase
+        .from('ritms')
+        .select('id')
+        .eq('user_id', user.id)
+        .ilike('code', trimmed)
+        .limit(1);
+      if (existing && existing.length > 0) return;
+
+      const { data: inserted } = await supabase
+        .from('ritms')
+        .insert({ user_id: user.id, code: trimmed, status: 'open' })
+        .select()
+        .single();
+      if (inserted) {
+        await supabase.from('ritm_history').insert({
+          ritm_id: inserted.id,
+          user_id: user.id,
+          field: 'created',
+          old_value: null,
+          new_value: trimmed,
+        });
+      }
+    },
+    [user]
+  );
+
   const stopTimer = useCallback(
     async (id: string) => {
       const t = timers.find((x) => x.id === id);
@@ -241,9 +340,11 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         type: 'timer',
       });
 
+      if (t.ritmCode) await ensureRitm(t.ritmCode);
+
       await refresh();
     },
-    [timers, user, refresh, removeTimer]
+    [timers, user, refresh, removeTimer, ensureRitm]
   );
 
   const addManualEntry = useCallback(
@@ -273,9 +374,11 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         type: 'manual',
       });
 
+      if (ritmCode) await ensureRitm(ritmCode);
+
       await refresh();
     },
-    [user, refresh]
+    [user, refresh, ensureRitm]
   );
 
   // ---------- RITMs ----------
@@ -300,16 +403,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
       if (!user) return { error: 'Não autenticado' };
       const { data: inserted, error } = await supabase
         .from('ritms')
-        .insert({
-          user_id: user.id,
-          code: data.code.trim(),
-          title: data.title,
-          description: data.description,
-          requester: data.requester,
-          category: data.category,
-          status: data.status,
-          pending_reason: data.status === 'pending' ? data.pendingReason : '',
-        })
+        .insert({ user_id: user.id, ...toRow(data) })
         .select()
         .single();
 
@@ -336,32 +430,12 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         pendingReason: data.status === 'pending' ? data.pendingReason : '',
       };
 
-      const { error } = await supabase
-        .from('ritms')
-        .update({
-          code: normalized.code,
-          title: normalized.title,
-          description: normalized.description,
-          requester: normalized.requester,
-          category: normalized.category,
-          status: normalized.status,
-          pending_reason: normalized.pendingReason,
-        })
-        .eq('id', id);
+      const { error } = await supabase.from('ritms').update(toRow(normalized)).eq('id', id);
 
       if (error) return { error: error.message };
 
       if (current) {
-        const fields: (keyof RitmInput)[] = [
-          'code',
-          'title',
-          'description',
-          'requester',
-          'category',
-          'status',
-          'pendingReason',
-        ];
-        const changes = fields
+        const changes = TRACKED_FIELDS
           .filter((f) => (current[f] ?? '') !== (normalized[f] ?? ''))
           .map((f) => ({
             field: f,
@@ -414,6 +488,46 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  // ---------- Useful links ----------
+  const addLink = useCallback(
+    async (data: UsefulLinkInput) => {
+      if (!user) return { error: 'Não autenticado' };
+      const { error } = await supabase.from('useful_links').insert({
+        user_id: user.id,
+        title: data.title,
+        url: data.url,
+        hotkey: data.hotkey,
+      });
+      if (error) return { error: error.message };
+      await refresh();
+      return {};
+    },
+    [user, refresh]
+  );
+
+  const updateLink = useCallback(
+    async (id: string, data: UsefulLinkInput) => {
+      if (!user) return { error: 'Não autenticado' };
+      const { error } = await supabase
+        .from('useful_links')
+        .update({ title: data.title, url: data.url, hotkey: data.hotkey })
+        .eq('id', id);
+      if (error) return { error: error.message };
+      await refresh();
+      return {};
+    },
+    [user, refresh]
+  );
+
+  const deleteLink = useCallback(
+    async (id: string) => {
+      if (!user) return;
+      await supabase.from('useful_links').delete().eq('id', id);
+      await refresh();
+    },
+    [user, refresh]
+  );
+
   // ---------- Stats ----------
   const getTodayTotal = useCallback(() => {
     if (!user) return 0;
@@ -463,6 +577,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         entries,
         ritms,
         profiles,
+        usefulLinks,
         loading,
         addTimer,
         pauseTimer,
@@ -478,6 +593,9 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         setRitmArchived,
         deleteRitm,
         getRitmHistory,
+        addLink,
+        updateLink,
+        deleteLink,
         getTodayTotal,
         getEntriesByPeriod,
         getUserEntries,
