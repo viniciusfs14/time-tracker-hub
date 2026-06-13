@@ -105,3 +105,33 @@ export type UsefulLinkInput = {
   url: string;
   hotkey: string;
 };
+
+export type CalendarEventType = 'reminder' | 'meeting';
+
+export interface CalendarEvent {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  eventType: CalendarEventType;
+  location: string;
+  startAt: string;
+  endAt: string | null;
+  allDay: boolean;
+  shared: boolean;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CalendarEventInput = {
+  title: string;
+  description: string;
+  eventType: CalendarEventType;
+  location: string;
+  startAt: string;
+  endAt: string | null;
+  allDay: boolean;
+  shared: boolean;
+  color: string;
+};

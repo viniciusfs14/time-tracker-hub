@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Clock, BarChart3, Calendar, Filter, Ticket, CircleDot, PauseCircle, CheckCircle2 } from 'lucide-react';
+import { Clock, BarChart3, Calendar, Filter, Ticket, CircleDot, PauseCircle, CheckCircle2, CalendarDays, ChevronDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { StatsCard } from '@/components/StatsCard';
+import { CalendarPanel } from '@/components/CalendarPanel';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { RitmStatusValue } from '@/types';
 import { formatTime, formatDate } from '@/utils/time';
@@ -20,6 +21,7 @@ export function AdminDashboard() {
   const { entries, ritms, getProfileName } = useTimeTracker();
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<string>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const dates = useMemo(() => {
     const uniqueDates = [...new Set(entries.map(e => e.date))].sort((a, b) => b.localeCompare(a));
@@ -88,7 +90,16 @@ export function AdminDashboard() {
             <Ticket className="w-4 h-4" />
             Chamados
           </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <CalendarDays className="w-4 h-4" />
+            Calendário
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="calendar" className="space-y-6">
+          <CalendarPanel />
+        </TabsContent>
+
 
         <TabsContent value="overview" className="space-y-6">
           {/* Filters */}
@@ -209,14 +220,26 @@ export function AdminDashboard() {
                 {ritmSummary.map((ritm) => {
                   const meta = STATUS_META[ritm.status];
                   const StatusIcon = meta.icon;
+                  const isExpanded = expandedId === ritm.id;
+                  const ritmEntries = isExpanded
+                    ? entries
+                        .filter((e) => (e.ritmCode || '').toUpperCase() === ritm.code.toUpperCase())
+                        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                    : [];
                   return (
                     <div
                       key={ritm.id}
-                      className={cn('p-4 rounded-xl border-l-4 bg-card/40', meta.border, ritm.archived && 'opacity-60')}
+                      className={cn('rounded-xl border-l-4 bg-card/40', meta.border, ritm.archived && 'opacity-60')}
                     >
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <button
+                        className="w-full text-left p-4 flex items-start justify-between gap-3 flex-wrap"
+                        onClick={() => setExpandedId(isExpanded ? null : ritm.id)}
+                      >
                         <div className="space-y-1.5 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <ChevronDown
+                              className={cn('w-4 h-4 text-muted-foreground transition-transform', isExpanded && 'rotate-180')}
+                            />
                             <h4 className="font-semibold font-mono text-lg">{ritm.code}</h4>
                             <Badge variant="outline" className={cn('gap-1', meta.cls)}>
                               <StatusIcon className="w-3 h-3" /> {meta.label}
@@ -237,12 +260,44 @@ export function AdminDashboard() {
                           <p className="font-mono font-bold text-primary">{formatTime(ritm.totalTime)}</p>
                           <p className="text-xs text-muted-foreground">tempo total</p>
                         </div>
-                      </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-border px-4 py-4 space-y-3 animate-fade-in">
+                          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
+                            {ritm.requestType && <p><span className="text-muted-foreground">Tipo:</span> {ritm.requestType}</p>}
+                            {ritm.operationalUnit && <p><span className="text-muted-foreground">Unidade:</span> {ritm.operationalUnit}</p>}
+                            {ritm.locality && <p><span className="text-muted-foreground">Localidade:</span> {ritm.locality}</p>}
+                            {ritm.pims && <p><span className="text-muted-foreground">PIMS:</span> {ritm.pims}</p>}
+                            {ritm.pep && <p><span className="text-muted-foreground">PEP:</span> {ritm.pep}</p>}
+                            {ritm.requesterEmail && <p><span className="text-muted-foreground">Email:</span> {ritm.requesterEmail}</p>}
+                            {ritm.description && <p className="sm:col-span-2"><span className="text-muted-foreground">Descrição:</span> {ritm.description}</p>}
+                            {ritm.observation && <p className="sm:col-span-2"><span className="text-muted-foreground">Obs:</span> {ritm.observation}</p>}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium mb-2">Registros ({ritmEntries.length})</p>
+                            {ritmEntries.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">Nenhum registro vinculado.</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {ritmEntries.map((e) => (
+                                  <div key={e.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/30 text-sm">
+                                    <span className="truncate">{e.activity}</span>
+                                    <span className="text-muted-foreground shrink-0">{getProfileName(e.userId)} • {formatDate(e.date)}</span>
+                                    <span className="font-mono font-medium text-primary shrink-0">{formatTime(e.duration)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
+
           </div>
         </TabsContent>
 

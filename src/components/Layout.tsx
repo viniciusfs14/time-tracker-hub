@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { LogOut, Clock } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,7 @@ import { getGreeting, formatDate } from '@/utils/time';
 import { ThemeToggle } from './ThemeToggle';
 import { ProfileDialog } from './ProfileDialog';
 import { useLinkHotkeys } from '@/hooks/use-link-hotkeys';
+import { BrandLogo } from './BrandLogo';
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,9 +27,8 @@ export function Layout({ children }: LayoutProps) {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-glow">
-                <Clock className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <BrandLogo />
+
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold gradient-text">Radix Time Tracker</h1>
                 <p className="text-xs text-muted-foreground">{formatDate(new Date())}</p>
