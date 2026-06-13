@@ -11,6 +11,9 @@ import {
   CircleDot,
   PauseCircle,
   CheckCircle2,
+  ChevronDown,
+  Timer,
+  PenLine,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +30,7 @@ import {
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ritm, RitmStatusValue } from '@/types';
-import { formatTime } from '@/utils/time';
+import { formatTime, formatDate } from '@/utils/time';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { RitmFormDialog } from '@/components/RitmFormDialog';
@@ -39,8 +42,16 @@ const STATUS_META: Record<RitmStatusValue, { label: string; icon: typeof CircleD
   closed: { label: 'Encerrado', icon: CheckCircle2, cls: 'bg-muted text-muted-foreground border-border' },
 };
 
+const DetailRow = ({ label, value }: { label: string; value?: string }) =>
+  value ? (
+    <div className="flex gap-2 text-sm">
+      <span className="text-muted-foreground shrink-0">{label}:</span>
+      <span className="text-foreground break-words">{value}</span>
+    </div>
+  ) : null;
+
 export function RitmManager() {
-  const { ritms, getRitmTotalTime, setRitmArchived, deleteRitm } = useTimeTracker();
+  const { ritms, entries, getRitmTotalTime, setRitmArchived, deleteRitm } = useTimeTracker();
   const { user } = useAuth();
 
   const [showArchived, setShowArchived] = useState(false);
@@ -48,6 +59,7 @@ export function RitmManager() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selected, setSelected] = useState<Ritm | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Ritm | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const myRitms = useMemo(
     () => ritms.filter((r) => r.userId === user?.id && r.archived === showArchived),
@@ -58,6 +70,11 @@ export function RitmManager() {
     () => ritms.filter((r) => r.userId === user?.id && r.archived).length,
     [ritms, user]
   );
+
+  const entriesForCode = (code: string) =>
+    entries
+      .filter((e) => e.userId === user?.id && (e.ritmCode || '').toUpperCase() === code.toUpperCase())
+      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
 
   const openCreate = () => {
     setSelected(null);
@@ -100,7 +117,6 @@ export function RitmManager() {
     window.open(`mailto:${ritm.requesterEmail ? encodeURIComponent(ritm.requesterEmail) : ''}?subject=${subject}&body=${body}`, '_blank');
   };
 
-
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     await deleteRitm(deleteTarget.id);
@@ -142,14 +158,22 @@ export function RitmManager() {
           {myRitms.map((ritm) => {
             const meta = STATUS_META[ritm.status];
             const StatusIcon = meta.icon;
+            const isExpanded = expandedId === ritm.id;
+            const ritmEntries = isExpanded ? entriesForCode(ritm.code) : [];
             return (
               <div
                 key={ritm.id}
-                className="p-4 rounded-xl border border-border bg-card/40 transition-all hover:border-primary/30"
+                className="rounded-xl border border-border bg-card/40 transition-all hover:border-primary/30"
               >
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div className="space-y-1.5 min-w-0">
+                <div className="p-4 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <button
+                    className="space-y-1.5 min-w-0 text-left flex-1"
+                    onClick={() => setExpandedId(isExpanded ? null : ritm.id)}
+                  >
                     <div className="flex items-center gap-2 flex-wrap">
+                      <ChevronDown
+                        className={cn('w-4 h-4 text-muted-foreground transition-transform', isExpanded && 'rotate-180')}
+                      />
                       <h3 className="font-semibold font-mono text-lg">{ritm.code}</h3>
                       <Badge variant="outline" className={cn('gap-1', meta.cls)}>
                         <StatusIcon className="w-3 h-3" /> {meta.label}
@@ -161,43 +185,22 @@ export function RitmManager() {
                       )}
                     </div>
                     {ritm.title && <p className="font-medium">{ritm.title}</p>}
-                    {ritm.requestType && (
-                      <p className="text-sm text-muted-foreground">Tipo: {ritm.requestType}</p>
-                    )}
                     {ritm.requester && (
                       <p className="text-sm text-muted-foreground">
                         Solicitante: {ritm.requester}
                         {ritm.requesterEmail ? ` (${ritm.requesterEmail})` : ''}
                       </p>
                     )}
-                    {ritm.operationalUnit && (
-                      <p className="text-sm text-muted-foreground">Unidade: {ritm.operationalUnit}</p>
-                    )}
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {ritm.locality && (
-                        <Badge variant="outline" className="font-normal">{ritm.locality}</Badge>
-                      )}
-                      {ritm.pims && (
-                        <Badge variant="outline" className="font-normal">{ritm.pims}</Badge>
-                      )}
-                      {ritm.pep && (
-                        <Badge variant="outline" className="font-normal font-mono">PEP: {ritm.pep}</Badge>
-                      )}
-                    </div>
-                    {ritm.observation && (
-                      <p className="text-sm text-muted-foreground">Obs: {ritm.observation}</p>
-                    )}
                     {ritm.status === 'pending' && ritm.pendingReason && (
                       <p className="text-sm text-warning">Pendência: {ritm.pendingReason}</p>
                     )}
-
                     <p className="text-sm text-muted-foreground">
                       Tempo total:{' '}
                       <span className="font-mono font-medium text-foreground">
                         {formatTime(getRitmTotalTime(ritm.code))}
                       </span>
                     </p>
-                  </div>
+                  </button>
 
                   <div className="flex gap-1 flex-wrap shrink-0">
                     <Button variant="ghost" size="icon" className="h-9 w-9" title="Editar" onClick={() => openEdit(ritm)}>
@@ -232,6 +235,75 @@ export function RitmManager() {
                     </Button>
                   </div>
                 </div>
+
+                {isExpanded && (
+                  <div className="border-t border-border px-4 py-4 space-y-4 animate-fade-in">
+                    <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                      <DetailRow label="Descrição" value={ritm.description} />
+                      <DetailRow label="Tipo de solicitação" value={ritm.requestType} />
+                      <DetailRow label="Unidade Operacional" value={ritm.operationalUnit} />
+                      <DetailRow label="Localidade" value={ritm.locality} />
+                      <DetailRow label="PIMS" value={ritm.pims} />
+                      <DetailRow label="PEP" value={ritm.pep} />
+                      <DetailRow label="Email do solicitante" value={ritm.requesterEmail} />
+                      <DetailRow label="Observação" value={ritm.observation} />
+                      <DetailRow label="Criado em" value={formatDate(ritm.createdAt)} />
+                      <DetailRow label="Atualizado em" value={formatDate(ritm.updatedAt)} />
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium mb-2">
+                        Registros associados ({ritmEntries.length})
+                      </p>
+                      {ritmEntries.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum registro de tempo vinculado a este chamado ainda.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {ritmEntries.map((e) => (
+                            <div
+                              key={e.id}
+                              className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30"
+                            >
+                              <div
+                                className={cn(
+                                  'w-7 h-7 rounded-md flex items-center justify-center shrink-0',
+                                  e.type === 'timer' ? 'bg-primary/10' : 'bg-secondary/10'
+                                )}
+                              >
+                                {e.type === 'timer' ? (
+                                  <Timer className="w-3.5 h-3.5 text-primary" />
+                                ) : (
+                                  <PenLine className="w-3.5 h-3.5 text-secondary" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{e.activity}</p>
+                                <p className="text-xs text-muted-foreground">{formatDate(e.date)}</p>
+                              </div>
+                              <span className="font-mono text-sm font-semibold text-primary">
+                                {formatTime(e.duration)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" className="gap-2" onClick={() => openEdit(ritm)}>
+                        <Pencil className="w-3.5 h-3.5" /> Editar
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-2" onClick={() => openHistory(ritm)}>
+                        <History className="w-3.5 h-3.5" /> Histórico
+                      </Button>
+                      <Button size="sm" variant="outline" className="gap-2" onClick={() => handleEmail(ritm)}>
+                        <Mail className="w-3.5 h-3.5" /> Email
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
