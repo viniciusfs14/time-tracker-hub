@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { LogOut, Clock } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
