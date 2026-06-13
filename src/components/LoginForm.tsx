@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock, LogIn, User, Lock, Mail, UserPlus } from 'lucide-react';
+import { LogIn, User, Lock, Mail, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
