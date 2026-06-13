@@ -90,7 +90,16 @@ export function AdminDashboard() {
             <Ticket className="w-4 h-4" />
             Chamados
           </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <CalendarDays className="w-4 h-4" />
+            Calendário
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="calendar" className="space-y-6">
+          <CalendarPanel />
+        </TabsContent>
+
 
         <TabsContent value="overview" className="space-y-6">
           {/* Filters */}
