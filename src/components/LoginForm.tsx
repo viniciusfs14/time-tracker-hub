@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { BrandLogo } from './BrandLogo';
 
 export function LoginForm() {
   const { signIn, signUp, signInWithGoogle } = useAuth();
