@@ -64,9 +64,8 @@ export function LoginForm() {
       <div className="w-full max-w-md animate-scale-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-primary flex items-center justify-center shadow-glow animate-float">
-            <Clock className="w-10 h-10 text-primary-foreground" />
-          </div>
+          <BrandLogo size="lg" className="mx-auto mb-4" />
+
           <h1 className="text-3xl font-bold gradient-text mb-2">Radix Time Tracker</h1>
           <p className="text-muted-foreground">Controle suas atividades com precisão</p>
         </div>
