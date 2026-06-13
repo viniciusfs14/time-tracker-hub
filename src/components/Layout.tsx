@@ -7,6 +7,7 @@ import { getGreeting, formatDate } from '@/utils/time';
 import { ThemeToggle } from './ThemeToggle';
 import { ProfileDialog } from './ProfileDialog';
 import { useLinkHotkeys } from '@/hooks/use-link-hotkeys';
+import { BrandLogo } from './BrandLogo';
 
 interface LayoutProps {
   children: ReactNode;
