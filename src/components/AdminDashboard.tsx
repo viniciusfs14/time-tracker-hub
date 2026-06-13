@@ -21,6 +21,7 @@ export function AdminDashboard() {
   const { entries, ritms, getProfileName } = useTimeTracker();
   const [selectedDate, setSelectedDate] = useState<string>('all');
   const [selectedUser, setSelectedUser] = useState<string>('all');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const dates = useMemo(() => {
     const uniqueDates = [...new Set(entries.map(e => e.date))].sort((a, b) => b.localeCompare(a));
