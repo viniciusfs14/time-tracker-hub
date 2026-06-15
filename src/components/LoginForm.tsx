@@ -65,10 +65,13 @@ export function LoginForm() {
       <div className="w-full max-w-md animate-scale-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <BrandLogo size="lg" className="mx-auto mb-4" />
+          <BrandLogo size="lg" wordmark={false} className="justify-center mb-5" />
 
-          <h1 className="text-3xl font-bold gradient-text mb-2">Radix Time Tracker</h1>
-          <p className="text-muted-foreground">Controle suas atividades com precisão</p>
+          <h1 className="text-4xl font-bold tracking-tight mb-2">
+            <span className="brand-gradient-text">RADIX</span>
+          </h1>
+          <p className="text-sm font-medium text-foreground">Engenharia e Software</p>
+          <p className="text-muted-foreground mt-1">Controle suas atividades com precisão</p>
         </div>
 
         {/* Form Card */}
