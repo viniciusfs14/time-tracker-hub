@@ -65,11 +65,9 @@ export function LoginForm() {
       <div className="w-full max-w-md animate-scale-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <BrandLogo size="lg" wordmark={false} className="justify-center mb-5" />
+          <BrandLogo size="lg" className="justify-center mb-4" />
 
-          <h1 className="text-4xl font-bold tracking-tight mb-2">
-            <span className="brand-gradient-text">RADIX</span>
-          </h1>
+          <h1 className="sr-only">Radix Engenharia e Software</h1>
           <p className="text-sm font-medium text-foreground">Engenharia e Software</p>
           <p className="text-muted-foreground mt-1">Controle suas atividades com precisão</p>
         </div>
