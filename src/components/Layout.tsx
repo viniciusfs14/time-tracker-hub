@@ -26,11 +26,11 @@ export function Layout({ children }: LayoutProps) {
       <header className="sticky top-0 z-50 glass-card border-b border-border/50 backdrop-blur-xl">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <BrandLogo />
 
-              <div className="hidden sm:block">
-                <h1 className="text-xl font-bold gradient-text">Radix Time Tracker</h1>
+              <div className="hidden sm:block border-l border-border/60 pl-3">
+                <h1 className="text-sm font-semibold text-foreground leading-tight">Time Tracker</h1>
                 <p className="text-xs text-muted-foreground">{formatDate(new Date())}</p>
               </div>
             </div>
