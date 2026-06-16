@@ -383,11 +383,46 @@ export function CalendarPanel() {
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
+            {msConnected ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={loadMsEvents}
+                disabled={msLoading}
+                title={msAccount ? `Microsoft: ${msAccount}` : 'Sincronizar Microsoft'}
+              >
+                {msLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span className="hidden sm:inline">Teams</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={connectMicrosoft}
+                disabled={msConnecting}
+              >
+                {msConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                <span className="hidden sm:inline">Conectar Teams</span>
+              </Button>
+            )}
             <Button size="sm" className="gap-2" onClick={() => openCreate(selectedDay)}>
               <Plus className="w-4 h-4" /> Novo
             </Button>
           </div>
         </div>
+
+        {msConnected && (
+          <p className="text-xs text-muted-foreground -mt-2 mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: MS_COLOR }} />
+            Eventos do Microsoft Teams/Outlook sincronizados{msAccount ? ` (${msAccount})` : ''}
+            <button onClick={disconnectMicrosoft} className="inline-flex items-center gap-1 text-destructive hover:underline">
+              <Unplug className="w-3 h-3" /> desconectar
+            </button>
+          </p>
+        )}
+
 
         <div className="grid grid-cols-7 gap-1 mb-1">
           {WEEKDAYS.map((d) => (
