@@ -11,6 +11,10 @@ import {
   Pencil,
   Clock,
   Globe,
+  Link2,
+  Loader2,
+  RefreshCw,
+  Unplug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +42,14 @@ import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { CalendarEvent, CalendarEventType } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const MS_COLOR = 'hsl(238 47% 57%)'; // Microsoft Teams purple-blue
+
+interface DisplayEvent extends CalendarEvent {
+  external?: boolean;
+  webLink?: string;
+}
+
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = [
