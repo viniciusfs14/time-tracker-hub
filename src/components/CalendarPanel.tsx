@@ -86,8 +86,8 @@ const mapEvent = (r: any): CalendarEvent => ({
   updatedAt: r.updated_at,
 });
 
-const colorFor = (e: CalendarEvent) =>
-  e.color || (e.eventType === 'meeting' ? 'hsl(217 91% 60%)' : 'hsl(280 75% 55%)');
+const colorFor = (e: DisplayEvent) =>
+  e.external ? MS_COLOR : e.color || (e.eventType === 'meeting' ? 'hsl(217 91% 60%)' : 'hsl(280 75% 55%)');
 
 const formatHour = (iso: string) =>
   new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
