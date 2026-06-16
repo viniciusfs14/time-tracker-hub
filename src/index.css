@@ -216,6 +216,46 @@
   .btn-glow:hover::after {
     @apply opacity-100;
   }
+
+  /* Animated aura around the login logo */
+  .logo-aura {
+    @apply relative flex items-center justify-center;
+  }
+
+  .logo-aura::before,
+  .logo-aura::after {
+    content: '';
+    @apply absolute rounded-full pointer-events-none;
+  }
+
+  /* Rotating conic gradient ring */
+  .logo-aura::before {
+    width: 230px;
+    height: 230px;
+    background: conic-gradient(
+      from 0deg,
+      hsl(264 57% 54% / 0) 0%,
+      hsl(264 57% 54% / 0.55) 25%,
+      hsl(148 54% 52% / 0.55) 50%,
+      hsl(264 57% 54% / 0) 75%,
+      hsl(264 57% 54% / 0) 100%
+    );
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+    animation: aura-spin 6s linear infinite;
+  }
+
+  /* Soft pulsing glow */
+  .logo-aura::after {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, hsl(264 57% 54% / 0.28) 0%, hsl(148 54% 52% / 0.12) 45%, transparent 70%);
+    animation: aura-pulse 4s ease-in-out infinite;
+  }
+
+  .logo-aura > * {
+    @apply relative z-10;
+  }
 }
 
 @layer utilities {
@@ -273,6 +313,32 @@
   }
   50% {
     opacity: 0.7;
+  }
+}
+
+@keyframes aura-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aura-pulse {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes aura-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
   }
 }
 

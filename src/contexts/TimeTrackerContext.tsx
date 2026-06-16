@@ -17,6 +17,7 @@ interface TimeTrackerContextType {
   stopTimer: (id: string) => Promise<void>;
   removeTimer: (id: string) => void;
   updateTimer: (id: string, data: { activity?: string; ritmCode?: string }) => void;
+  togglePin: (id: string) => void;
   pauseAll: () => void;
   resumeAll: () => void;
   // manual
@@ -272,6 +273,10 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
           : t
       )
     );
+  }, []);
+
+  const togglePin = useCallback((id: string) => {
+    setTimers((prev) => prev.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)));
   }, []);
 
   const removeTimer = useCallback((id: string) => {
@@ -585,6 +590,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         stopTimer,
         removeTimer,
         updateTimer,
+        togglePin,
         pauseAll,
         resumeAll,
         addManualEntry,
