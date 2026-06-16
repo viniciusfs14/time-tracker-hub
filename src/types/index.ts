@@ -89,6 +89,7 @@ export interface RunningTimer {
   accumulatedTime: number; // ms
   createdAt: number;
   urgent?: boolean;
+  pinned?: boolean;
 }
 
 export interface UsefulLink {
