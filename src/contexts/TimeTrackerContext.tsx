@@ -590,6 +590,7 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
         stopTimer,
         removeTimer,
         updateTimer,
+        togglePin,
         pauseAll,
         resumeAll,
         addManualEntry,
