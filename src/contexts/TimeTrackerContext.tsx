@@ -17,6 +17,7 @@ interface TimeTrackerContextType {
   stopTimer: (id: string) => Promise<void>;
   removeTimer: (id: string) => void;
   updateTimer: (id: string, data: { activity?: string; ritmCode?: string }) => void;
+  togglePin: (id: string) => void;
   pauseAll: () => void;
   resumeAll: () => void;
   // manual
