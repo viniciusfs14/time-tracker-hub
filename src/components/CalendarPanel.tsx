@@ -505,22 +505,35 @@ export function CalendarPanel() {
         ) : (
           <div className="space-y-2">
             {selectedEvents.map((e) => {
-              const mine = e.userId === user?.id;
+              const mine = e.userId === user?.id && !e.external;
+              const clickable = mine || (e.external && !!e.webLink);
               return (
                 <button
                   key={e.id}
-                  onClick={() => mine && openEdit(e)}
+                  onClick={() => {
+                    if (e.external) {
+                      if (e.webLink) window.open(e.webLink, '_blank', 'noopener');
+                    } else if (mine) {
+                      openEdit(e);
+                    }
+                  }}
                   className={cn(
                     'w-full text-left p-3 rounded-xl border border-border bg-card/40 transition-colors',
-                    mine && 'hover:border-primary/40 cursor-pointer'
+                    clickable && 'hover:border-primary/40 cursor-pointer'
                   )}
                   style={{ borderLeft: `3px solid ${colorFor(e)}` }}
                 >
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Badge variant="outline" className="gap-1 text-[10px]">
-                      {e.eventType === 'meeting' ? <Users className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
-                      {e.eventType === 'meeting' ? 'Reunião' : 'Lembrete'}
-                    </Badge>
+                    {e.external ? (
+                      <Badge variant="outline" className="gap-1 text-[10px]" style={{ color: MS_COLOR, borderColor: `${MS_COLOR}55` }}>
+                        <Users className="w-3 h-3" /> Teams
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1 text-[10px]">
+                        {e.eventType === 'meeting' ? <Users className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+                        {e.eventType === 'meeting' ? 'Reunião' : 'Lembrete'}
+                      </Badge>
+                    )}
                     {e.shared && (
                       <Badge variant="secondary" className="gap-1 text-[10px]">
                         <Globe className="w-3 h-3" /> Compartilhado
@@ -537,13 +550,14 @@ export function CalendarPanel() {
                       <MapPin className="w-3 h-3" /> {e.location}
                     </p>
                   )}
-                  {e.description && <p className="text-xs text-muted-foreground mt-1">{e.description}</p>}
-                  {!mine && (
+                  {e.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
+                  {!mine && !e.external && (
                     <p className="text-[10px] text-muted-foreground mt-1">por {getProfileName(e.userId)}</p>
                   )}
                 </button>
               );
             })}
+
           </div>
         )}
       </div>
