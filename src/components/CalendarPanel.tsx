@@ -263,8 +263,8 @@ export function CalendarPanel() {
 
 
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    events.forEach((e) => {
+    const map = new Map<string, DisplayEvent[]>();
+    [...events, ...msEvents].forEach((e) => {
       const key = dateKey(new Date(e.startAt));
       const arr = map.get(key) ?? [];
       arr.push(e);
@@ -274,7 +274,7 @@ export function CalendarPanel() {
       arr.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
     );
     return map;
-  }, [events]);
+  }, [events, msEvents]);
 
   const selectedEvents = eventsByDay.get(dateKey(selectedDay)) ?? [];
   const today = new Date();
