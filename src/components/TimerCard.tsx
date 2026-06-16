@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Pause, Square, Trash2, Zap, Ticket } from 'lucide-react';
+import { Play, Pause, Square, Trash2, Zap, Ticket, Pin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export function TimerCard({ timer }: { timer: RunningTimer }) {
-  const { pauseTimer, resumeTimer, stopTimer, removeTimer, updateTimer } = useTimeTracker();
+  const { pauseTimer, resumeTimer, stopTimer, removeTimer, updateTimer, togglePin } = useTimeTracker();
   const [displayMs, setDisplayMs] = useState(0);
 
   useEffect(() => {
