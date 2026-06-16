@@ -275,6 +275,10 @@ export function TimeTrackerProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const togglePin = useCallback((id: string) => {
+    setTimers((prev) => prev.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)));
+  }, []);
+
   const removeTimer = useCallback((id: string) => {
     setTimers((prev) => prev.filter((t) => t.id !== id));
   }, []);
