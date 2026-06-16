@@ -95,11 +95,20 @@ export function AdminDashboard() {
             <CalendarDays className="w-4 h-4" />
             Calendário
           </TabsTrigger>
+          <TabsTrigger value="users" className="gap-2">
+            <Users className="w-4 h-4" />
+            Usuários
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-6">
           <CalendarPanel />
         </TabsContent>
+
+        <TabsContent value="users" className="space-y-6">
+          <UsersPanel />
+        </TabsContent>
+
 
 
         <TabsContent value="overview" className="space-y-6">
