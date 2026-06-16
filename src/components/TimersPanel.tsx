@@ -86,7 +86,7 @@ export function TimersPanel() {
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {[...timers]
-            .sort((a, b) => b.createdAt - a.createdAt)
+            .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || b.createdAt - a.createdAt)
             .map((t) => (
               <TimerCard key={t.id} timer={t} />
             ))}
