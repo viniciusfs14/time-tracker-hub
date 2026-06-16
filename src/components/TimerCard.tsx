@@ -36,11 +36,17 @@ export function TimerCard({ timer }: { timer: RunningTimer }) {
       className={cn(
         'rounded-2xl border p-5 transition-all duration-300 bg-card/60 backdrop-blur',
         timer.urgent ? 'border-destructive/50 shadow-[0_0_0_1px_hsl(var(--destructive)/0.2)]' : 'border-border/60',
-        timer.status === 'running' && 'ring-1 ring-primary/30'
+        timer.status === 'running' && 'ring-1 ring-primary/30',
+        timer.pinned && 'border-primary/50 shadow-[0_0_0_1px_hsl(var(--primary)/0.25)]'
       )}
     >
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
+          {timer.pinned && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
+              <Pin className="w-3.5 h-3.5 fill-current" /> Fixado
+            </span>
+          )}
           {timer.urgent && (
             <span className="flex items-center gap-1 text-xs font-semibold text-destructive shrink-0">
               <Zap className="w-3.5 h-3.5" /> Urgente
@@ -61,15 +67,29 @@ export function TimerCard({ timer }: { timer: RunningTimer }) {
             {timer.status === 'running' ? 'Em andamento' : 'Pausado'}
           </span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-          onClick={() => removeTimer(timer.id)}
-          title="Descartar sem salvar"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              'h-8 w-8 text-muted-foreground hover:text-primary',
+              timer.pinned && 'text-primary'
+            )}
+            onClick={() => togglePin(timer.id)}
+            title={timer.pinned ? 'Desafixar' : 'Fixar no topo'}
+          >
+            <Pin className={cn('w-4 h-4', timer.pinned && 'fill-current')} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={() => removeTimer(timer.id)}
+            title="Descartar sem salvar"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       <div
