@@ -65,7 +65,11 @@ export function LoginForm() {
       <div className="w-full max-w-md animate-scale-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <BrandLogo size="lg" className="justify-center mb-4" />
+          <div className="logo-aura mx-auto mb-6 h-[200px] w-[200px]">
+            <div className="animate-[aura-float_5s_ease-in-out_infinite]">
+              <BrandLogo size="lg" className="justify-center" />
+            </div>
+          </div>
 
           <h1 className="sr-only">Radix Engenharia e Software</h1>
           <p className="text-sm font-medium text-foreground">Engenharia e Software</p>
