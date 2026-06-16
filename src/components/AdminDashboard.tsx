@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Clock, BarChart3, Calendar, Filter, Ticket, CircleDot, PauseCircle, CheckCircle2, CalendarDays, ChevronDown } from 'lucide-react';
+import { Clock, BarChart3, Calendar, Filter, Ticket, CircleDot, PauseCircle, CheckCircle2, CalendarDays, ChevronDown, Users } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { StatsCard } from '@/components/StatsCard';
 import { CalendarPanel } from '@/components/CalendarPanel';
+import { UsersPanel } from '@/components/UsersPanel';
 import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { RitmStatusValue } from '@/types';
 import { formatTime, formatDate } from '@/utils/time';
@@ -94,11 +95,20 @@ export function AdminDashboard() {
             <CalendarDays className="w-4 h-4" />
             Calendário
           </TabsTrigger>
+          <TabsTrigger value="users" className="gap-2">
+            <Users className="w-4 h-4" />
+            Usuários
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calendar" className="space-y-6">
           <CalendarPanel />
         </TabsContent>
+
+        <TabsContent value="users" className="space-y-6">
+          <UsersPanel />
+        </TabsContent>
+
 
 
         <TabsContent value="overview" className="space-y-6">

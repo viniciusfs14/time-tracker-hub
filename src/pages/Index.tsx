@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Layout } from '@/components/Layout';
 import { LoginForm } from '@/components/LoginForm';
 import { EmployeeDashboard } from '@/components/EmployeeDashboard';
 import { AdminDashboard } from '@/components/AdminDashboard';
-import { Clock } from 'lucide-react';
+import { Clock, LayoutDashboard, UserCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Index = () => {
   const { isAuthenticated, user, loading } = useAuth();
+  const [adminView, setAdminView] = useState<'admin' | 'employee'>('admin');
 
   if (loading) {
     return (
@@ -25,9 +28,45 @@ const Index = () => {
     return <LoginForm />;
   }
 
+  if (user?.role === 'admin') {
+    return (
+      <Layout>
+        <div className="space-y-6">
+          {/* Admin view switcher */}
+          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-muted/60 border border-border">
+            <button
+              onClick={() => setAdminView('admin')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                adminView === 'admin'
+                  ? 'bg-card text-primary shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <LayoutDashboard className="w-4 h-4" /> Gestão
+            </button>
+            <button
+              onClick={() => setAdminView('employee')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                adminView === 'employee'
+                  ? 'bg-card text-primary shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <UserCircle className="w-4 h-4" /> Meu registro
+            </button>
+          </div>
+
+          {adminView === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}
+        </div>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
-      {user?.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />}
+      <EmployeeDashboard />
     </Layout>
   );
 };

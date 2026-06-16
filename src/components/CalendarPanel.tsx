@@ -11,6 +11,10 @@ import {
   Pencil,
   Clock,
   Globe,
+  Link2,
+  Loader2,
+  RefreshCw,
+  Unplug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +42,14 @@ import { useTimeTracker } from '@/contexts/TimeTrackerContext';
 import { CalendarEvent, CalendarEventType } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+const MS_COLOR = 'hsl(238 47% 57%)'; // Microsoft Teams purple-blue
+
+interface DisplayEvent extends CalendarEvent {
+  external?: boolean;
+  webLink?: string;
+}
+
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = [
@@ -74,8 +86,8 @@ const mapEvent = (r: any): CalendarEvent => ({
   updatedAt: r.updated_at,
 });
 
-const colorFor = (e: CalendarEvent) =>
-  e.color || (e.eventType === 'meeting' ? 'hsl(217 91% 60%)' : 'hsl(280 75% 55%)');
+const colorFor = (e: DisplayEvent) =>
+  e.external ? MS_COLOR : e.color || (e.eventType === 'meeting' ? 'hsl(217 91% 60%)' : 'hsl(280 75% 55%)');
 
 const formatHour = (iso: string) =>
   new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -119,6 +131,13 @@ export function CalendarPanel() {
   const [form, setForm] = useState<EventFormState>(() => emptyForm(new Date()));
   const [saving, setSaving] = useState(false);
 
+  // Microsoft Teams / Outlook integration
+  const [msEvents, setMsEvents] = useState<DisplayEvent[]>([]);
+  const [msConnected, setMsConnected] = useState(false);
+  const [msAccount, setMsAccount] = useState<string | null>(null);
+  const [msLoading, setMsLoading] = useState(false);
+  const [msConnecting, setMsConnecting] = useState(false);
+
   const load = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -144,9 +163,108 @@ export function CalendarPanel() {
     });
   }, [cursor]);
 
+  // Fetch Microsoft calendar events for the visible range
+  const loadMsEvents = useCallback(async () => {
+    if (!user || cells.length === 0) return;
+    setMsLoading(true);
+    const start = new Date(cells[0]);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(cells[cells.length - 1]);
+    end.setHours(23, 59, 59, 999);
+
+    const { data, error } = await supabase.functions.invoke('microsoft-calendar', {
+      body: { start: start.toISOString(), end: end.toISOString() },
+    });
+    setMsLoading(false);
+    if (error || !data) {
+      setMsConnected(false);
+      setMsEvents([]);
+      return;
+    }
+    setMsConnected(!!data.connected);
+    setMsAccount(data.accountEmail ?? null);
+    if (data.error === 'reconnect_required') {
+      toast.info('Reconecte sua conta Microsoft para sincronizar o calendário.');
+    }
+    const mapped: DisplayEvent[] = (data.events ?? [])
+      .filter((e: { startAt?: string }) => e.startAt)
+      .map((e: any) => ({
+        id: `ms_${e.id}`,
+        userId: user.id,
+        title: e.title,
+        description: e.description ?? '',
+        eventType: 'meeting' as CalendarEventType,
+        location: e.location ?? '',
+        startAt: e.startAt,
+        endAt: e.endAt ?? null,
+        allDay: !!e.allDay,
+        shared: false,
+        color: MS_COLOR,
+        createdAt: e.startAt,
+        updatedAt: e.startAt,
+        external: true,
+        webLink: e.webLink ?? '',
+      }));
+    setMsEvents(mapped);
+  }, [user, cells]);
+
+  useEffect(() => {
+    loadMsEvents();
+  }, [loadMsEvents]);
+
+  // Handle Microsoft OAuth redirect callback (?code=...&state=ms_calendar)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('state') === 'ms_calendar' && params.get('code')) {
+      const code = params.get('code')!;
+      const redirectUri = window.location.origin + window.location.pathname;
+      // Clean URL immediately to avoid re-processing
+      window.history.replaceState({}, document.title, redirectUri);
+      (async () => {
+        setMsConnecting(true);
+        const { data, error } = await supabase.functions.invoke('microsoft-auth', {
+          body: { action: 'connect', code, redirectUri },
+        });
+        setMsConnecting(false);
+        if (error || data?.error) {
+          toast.error('Não foi possível conectar à conta Microsoft.');
+          return;
+        }
+        toast.success('Calendário Microsoft conectado!');
+        setMsConnected(true);
+        setMsAccount(data?.accountEmail ?? null);
+        loadMsEvents();
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const connectMicrosoft = async () => {
+    setMsConnecting(true);
+    const redirectUri = window.location.origin + window.location.pathname;
+    const { data, error } = await supabase.functions.invoke('microsoft-auth', {
+      body: { action: 'authUrl', redirectUri },
+    });
+    if (error || !data?.url) {
+      setMsConnecting(false);
+      toast.error('Integração Microsoft ainda não configurada.');
+      return;
+    }
+    window.location.href = data.url;
+  };
+
+  const disconnectMicrosoft = async () => {
+    await supabase.functions.invoke('microsoft-auth', { body: { action: 'disconnect' } });
+    setMsConnected(false);
+    setMsAccount(null);
+    setMsEvents([]);
+    toast.success('Conta Microsoft desconectada.');
+  };
+
+
   const eventsByDay = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
-    events.forEach((e) => {
+    const map = new Map<string, DisplayEvent[]>();
+    [...events, ...msEvents].forEach((e) => {
       const key = dateKey(new Date(e.startAt));
       const arr = map.get(key) ?? [];
       arr.push(e);
@@ -156,7 +274,7 @@ export function CalendarPanel() {
       arr.sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())
     );
     return map;
-  }, [events]);
+  }, [events, msEvents]);
 
   const selectedEvents = eventsByDay.get(dateKey(selectedDay)) ?? [];
   const today = new Date();
@@ -265,11 +383,46 @@ export function CalendarPanel() {
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
+            {msConnected ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={loadMsEvents}
+                disabled={msLoading}
+                title={msAccount ? `Microsoft: ${msAccount}` : 'Sincronizar Microsoft'}
+              >
+                {msLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                <span className="hidden sm:inline">Teams</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={connectMicrosoft}
+                disabled={msConnecting}
+              >
+                {msConnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                <span className="hidden sm:inline">Conectar Teams</span>
+              </Button>
+            )}
             <Button size="sm" className="gap-2" onClick={() => openCreate(selectedDay)}>
               <Plus className="w-4 h-4" /> Novo
             </Button>
           </div>
         </div>
+
+        {msConnected && (
+          <p className="text-xs text-muted-foreground -mt-2 mb-3 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: MS_COLOR }} />
+            Eventos do Microsoft Teams/Outlook sincronizados{msAccount ? ` (${msAccount})` : ''}
+            <button onClick={disconnectMicrosoft} className="inline-flex items-center gap-1 text-destructive hover:underline">
+              <Unplug className="w-3 h-3" /> desconectar
+            </button>
+          </p>
+        )}
+
 
         <div className="grid grid-cols-7 gap-1 mb-1">
           {WEEKDAYS.map((d) => (
@@ -352,22 +505,35 @@ export function CalendarPanel() {
         ) : (
           <div className="space-y-2">
             {selectedEvents.map((e) => {
-              const mine = e.userId === user?.id;
+              const mine = e.userId === user?.id && !e.external;
+              const clickable = mine || (e.external && !!e.webLink);
               return (
                 <button
                   key={e.id}
-                  onClick={() => mine && openEdit(e)}
+                  onClick={() => {
+                    if (e.external) {
+                      if (e.webLink) window.open(e.webLink, '_blank', 'noopener');
+                    } else if (mine) {
+                      openEdit(e);
+                    }
+                  }}
                   className={cn(
                     'w-full text-left p-3 rounded-xl border border-border bg-card/40 transition-colors',
-                    mine && 'hover:border-primary/40 cursor-pointer'
+                    clickable && 'hover:border-primary/40 cursor-pointer'
                   )}
                   style={{ borderLeft: `3px solid ${colorFor(e)}` }}
                 >
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Badge variant="outline" className="gap-1 text-[10px]">
-                      {e.eventType === 'meeting' ? <Users className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
-                      {e.eventType === 'meeting' ? 'Reunião' : 'Lembrete'}
-                    </Badge>
+                    {e.external ? (
+                      <Badge variant="outline" className="gap-1 text-[10px]" style={{ color: MS_COLOR, borderColor: `${MS_COLOR}55` }}>
+                        <Users className="w-3 h-3" /> Teams
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1 text-[10px]">
+                        {e.eventType === 'meeting' ? <Users className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+                        {e.eventType === 'meeting' ? 'Reunião' : 'Lembrete'}
+                      </Badge>
+                    )}
                     {e.shared && (
                       <Badge variant="secondary" className="gap-1 text-[10px]">
                         <Globe className="w-3 h-3" /> Compartilhado
@@ -384,13 +550,14 @@ export function CalendarPanel() {
                       <MapPin className="w-3 h-3" /> {e.location}
                     </p>
                   )}
-                  {e.description && <p className="text-xs text-muted-foreground mt-1">{e.description}</p>}
-                  {!mine && (
+                  {e.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{e.description}</p>}
+                  {!mine && !e.external && (
                     <p className="text-[10px] text-muted-foreground mt-1">por {getProfileName(e.userId)}</p>
                   )}
                 </button>
               );
             })}
+
           </div>
         )}
       </div>
