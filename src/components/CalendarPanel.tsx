@@ -131,6 +131,13 @@ export function CalendarPanel() {
   const [form, setForm] = useState<EventFormState>(() => emptyForm(new Date()));
   const [saving, setSaving] = useState(false);
 
+  // Microsoft Teams / Outlook integration
+  const [msEvents, setMsEvents] = useState<DisplayEvent[]>([]);
+  const [msConnected, setMsConnected] = useState(false);
+  const [msAccount, setMsAccount] = useState<string | null>(null);
+  const [msLoading, setMsLoading] = useState(false);
+  const [msConnecting, setMsConnecting] = useState(false);
+
   const load = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase
@@ -155,6 +162,105 @@ export function CalendarPanel() {
       return d;
     });
   }, [cursor]);
+
+  // Fetch Microsoft calendar events for the visible range
+  const loadMsEvents = useCallback(async () => {
+    if (!user || cells.length === 0) return;
+    setMsLoading(true);
+    const start = new Date(cells[0]);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(cells[cells.length - 1]);
+    end.setHours(23, 59, 59, 999);
+
+    const { data, error } = await supabase.functions.invoke('microsoft-calendar', {
+      body: { start: start.toISOString(), end: end.toISOString() },
+    });
+    setMsLoading(false);
+    if (error || !data) {
+      setMsConnected(false);
+      setMsEvents([]);
+      return;
+    }
+    setMsConnected(!!data.connected);
+    setMsAccount(data.accountEmail ?? null);
+    if (data.error === 'reconnect_required') {
+      toast.info('Reconecte sua conta Microsoft para sincronizar o calendário.');
+    }
+    const mapped: DisplayEvent[] = (data.events ?? [])
+      .filter((e: { startAt?: string }) => e.startAt)
+      .map((e: any) => ({
+        id: `ms_${e.id}`,
+        userId: user.id,
+        title: e.title,
+        description: e.description ?? '',
+        eventType: 'meeting' as CalendarEventType,
+        location: e.location ?? '',
+        startAt: e.startAt,
+        endAt: e.endAt ?? null,
+        allDay: !!e.allDay,
+        shared: false,
+        color: MS_COLOR,
+        createdAt: e.startAt,
+        updatedAt: e.startAt,
+        external: true,
+        webLink: e.webLink ?? '',
+      }));
+    setMsEvents(mapped);
+  }, [user, cells]);
+
+  useEffect(() => {
+    loadMsEvents();
+  }, [loadMsEvents]);
+
+  // Handle Microsoft OAuth redirect callback (?code=...&state=ms_calendar)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('state') === 'ms_calendar' && params.get('code')) {
+      const code = params.get('code')!;
+      const redirectUri = window.location.origin + window.location.pathname;
+      // Clean URL immediately to avoid re-processing
+      window.history.replaceState({}, document.title, redirectUri);
+      (async () => {
+        setMsConnecting(true);
+        const { data, error } = await supabase.functions.invoke('microsoft-auth', {
+          body: { action: 'connect', code, redirectUri },
+        });
+        setMsConnecting(false);
+        if (error || data?.error) {
+          toast.error('Não foi possível conectar à conta Microsoft.');
+          return;
+        }
+        toast.success('Calendário Microsoft conectado!');
+        setMsConnected(true);
+        setMsAccount(data?.accountEmail ?? null);
+        loadMsEvents();
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const connectMicrosoft = async () => {
+    setMsConnecting(true);
+    const redirectUri = window.location.origin + window.location.pathname;
+    const { data, error } = await supabase.functions.invoke('microsoft-auth', {
+      body: { action: 'authUrl', redirectUri },
+    });
+    if (error || !data?.url) {
+      setMsConnecting(false);
+      toast.error('Integração Microsoft ainda não configurada.');
+      return;
+    }
+    window.location.href = data.url;
+  };
+
+  const disconnectMicrosoft = async () => {
+    await supabase.functions.invoke('microsoft-auth', { body: { action: 'disconnect' } });
+    setMsConnected(false);
+    setMsAccount(null);
+    setMsEvents([]);
+    toast.success('Conta Microsoft desconectada.');
+  };
+
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
